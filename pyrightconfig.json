@@ -1,0 +1,19 @@
+{
+  "include": [
+    "app",
+    "scripts"
+  ],
+  "exclude": [
+    ".venv",
+    "**/.venv",
+    "**/node_modules",
+    "**/__pycache__",
+    "**/.*",
+    "data/chroma"
+  ],
+  "extraPaths": [
+    "app"
+  ],
+  "pythonVersion": "3.11",
+  "typeCheckingMode": "basic"
+}

@@ -1,0 +1,4091 @@
+/* =========================================================
+   ALTITUDE — Complete Responsive Stylesheet
+   ========================================================= */
+
+:root {
+    --sjk-blue: #0872ad;
+    --sjk-blue-dark: #0066a7;
+    --sjk-gold: #eba600;
+
+    --page-background: #edf2f8;
+    --panel-background: #ffffff;
+    --chat-background: #f8fafc;
+    --card-background: #f3f6f9;
+
+    --assistant-background: #e7e9ed;
+    --assistant-border: #dfe4e8;
+
+    --student-background: #dceefa;
+    --student-border: #c7e0ee;
+
+    --text-primary: #15191d;
+    --text-muted: #697581;
+    --border-color: #d8e0e8;
+    --scrollbar-color: #aab6c2;
+
+    --header-height: 108px;
+    --page-gap: 12px;
+}
+
+
+/* =========================================================
+   Global reset
+   ========================================================= */
+
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    width: 100%;
+    height: 100%;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    background: var(--page-background);
+}
+
+body {
+    color: var(--text-primary);
+}
+
+.stApp,
+[data-testid="stAppViewContainer"],
+[data-testid="stMain"] {
+    width: 100% !important;
+
+    height: 100vh !important;
+    height: 100dvh !important;
+
+    max-height: 100vh !important;
+    max-height: 100dvh !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    background: var(--page-background);
+
+    overflow: hidden !important;
+}
+
+
+/* Hide Streamlit interface elements */
+
+[data-testid="stHeader"],
+[data-testid="stToolbar"],
+[data-testid="stDecoration"],
+[data-testid="stStatusWidget"],
+footer {
+    display: none !important;
+}
+
+
+/* =========================================================
+   Main Streamlit page container
+   ========================================================= */
+
+[data-testid="stMainBlockContainer"],
+.block-container {
+    width: 100% !important;
+
+    height: 100vh !important;
+    height: 100dvh !important;
+
+    max-width: none !important;
+    max-height: 100vh !important;
+    max-height: 100dvh !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    overflow: hidden !important;
+}
+
+
+/*
+The Streamlit page contains:
+
+1. Header
+2. Mobile information control
+3. Application body
+*/
+
+.block-container
+> [data-testid="stVerticalBlock"] {
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+
+    display: flex !important;
+    flex-direction: column !important;
+
+    gap: 0 !important;
+
+    overflow: hidden !important;
+}
+
+
+/* =========================================================
+   Full-width blue header
+   ========================================================= */
+
+.sjk-header {
+    width: 100% !important;
+
+    height: var(--header-height) !important;
+    min-height: var(--header-height) !important;
+
+    margin: 0 !important;
+    padding: 0 1.45rem !important;
+
+    display: grid !important;
+    grid-template-columns: 1fr auto 1fr !important;
+    align-items: center !important;
+
+    background: var(--sjk-blue) !important;
+}
+
+
+/*
+The Streamlit wrapper containing the header must also use
+the complete page width without margins or padding.
+*/
+
+.block-container
+> [data-testid="stVerticalBlock"]
+> [data-testid="stElementContainer"]:has(.sjk-header) {
+    flex: 0 0 var(--header-height) !important;
+
+    width: 100% !important;
+
+    height: var(--header-height) !important;
+    min-height: var(--header-height) !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    overflow: hidden !important;
+}
+
+.block-container
+> [data-testid="stVerticalBlock"]
+> [data-testid="stElementContainer"]:has(.sjk-header)
+> [data-testid="stHtml"] {
+    width: 100% !important;
+    height: 100% !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+
+/* Header content */
+
+.sjk-header-left {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+}
+
+
+.sjk-header-centre {
+    text-align: center;
+    line-height: 1;
+}
+
+.sjk-header-right {
+    min-width: 175px;
+}
+
+.sjk-wordmark {
+    width: 180px;
+    max-width: 100%;
+    max-height: 84px;
+
+    object-fit: contain;
+}
+
+.sjk-wordmark-fallback {
+    color: #ffffff;
+
+    font-size: 3rem;
+    font-weight: 700;
+}
+
+.sjk-main-title {
+    margin: 0;
+
+    color: #ffffff;
+
+    font-size: clamp(
+        2.8rem,
+        4.2vw,
+        4.4rem
+    );
+
+    font-weight: 300;
+    letter-spacing: 0.045em;
+    line-height: 0.95;
+}
+
+.sjk-subtitle {
+    margin-top: 7px;
+
+    color: #07141c;
+
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+
+/* =========================================================
+   Mobile information control
+   ========================================================= */
+
+.st-key-mobile_info_bar {
+    display: none;
+}
+
+
+/*
+This wrapper occupies no space on desktop.
+*/
+
+.block-container
+> [data-testid="stVerticalBlock"]
+> [data-testid="stElementContainer"]:has(
+    .st-key-mobile_info_bar
+) {
+    flex: 0 0 0 !important;
+
+    width: 100% !important;
+
+    height: 0 !important;
+    min-height: 0 !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    overflow: visible !important;
+}
+
+
+/* =========================================================
+   Application body
+   ========================================================= */
+
+/*
+The app body takes every remaining pixel beneath the header.
+*/
+
+.block-container
+> [data-testid="stVerticalBlock"]
+> [data-testid="stElementContainer"]:has(
+    .st-key-app_body
+) {
+    flex: 1 1 0 !important;
+
+    width: 100% !important;
+
+    height: auto !important;
+    min-height: 0 !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    overflow: hidden !important;
+}
+
+
+/* Streamlit may create a layout wrapper around app_body */
+
+.block-container
+> [data-testid="stVerticalBlock"]
+> [data-testid="stElementContainer"]:has(
+    .st-key-app_body
+)
+> [data-testid="stLayoutWrapper"] {
+    width: 100% !important;
+
+    height: 100% !important;
+    min-height: 0 !important;
+
+    overflow: hidden !important;
+}
+
+
+/*
+Panel spacing belongs here instead of on block-container.
+This keeps the blue header edge-to-edge.
+*/
+
+.st-key-app_body {
+    width: 100% !important;
+
+    height: 100% !important;
+    min-height: 0 !important;
+
+    margin: 0 !important;
+
+    padding:
+        var(--page-gap)
+        var(--page-gap)
+        var(--page-gap)
+        var(--page-gap) !important;
+
+    overflow: hidden !important;
+}
+
+
+/* Possible wrapper inside app_body */
+
+.st-key-app_body
+> [data-testid="stLayoutWrapper"] {
+    width: 100% !important;
+
+    height: 100% !important;
+    min-height: 0 !important;
+
+    overflow: hidden !important;
+}
+
+
+/* =========================================================
+   Main desktop column row
+   ========================================================= */
+
+/*
+Only the row containing both main panel shells gets
+full-height behavior.
+
+This prevents nested chat rows from being stretched.
+*/
+
+.st-key-app_body
+[data-testid="stHorizontalBlock"]:has(
+    .st-key-left_panel_shell
+):has(
+    .st-key-main_panel_shell
+) {
+    width: 100% !important;
+
+    height: 100% !important;
+    min-height: 0 !important;
+
+    align-items: stretch !important;
+
+    overflow: hidden !important;
+}
+
+
+/* =========================================================
+   Main outer columns
+   ========================================================= */
+
+/*
+Only target the two outer application columns.
+
+Do not use:
+.st-key-app_body [data-testid="stColumn"]
+
+That broad selector also affects chat-message columns.
+*/
+
+.st-key-app_body
+[data-testid="stColumn"]:has(
+    .st-key-left_panel_shell
+),
+.st-key-app_body
+[data-testid="stColumn"]:has(
+    .st-key-main_panel_shell
+) {
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: none !important;
+
+    align-self: stretch !important;
+
+    overflow: hidden !important;
+}
+
+
+/* Direct vertical blocks in the two outer columns */
+
+.st-key-app_body
+[data-testid="stColumn"]:has(
+    .st-key-left_panel_shell
+)
+> [data-testid="stVerticalBlock"],
+.st-key-app_body
+[data-testid="stColumn"]:has(
+    .st-key-main_panel_shell
+)
+> [data-testid="stVerticalBlock"] {
+    width: 100% !important;
+
+    height: 100% !important;
+    min-height: 0 !important;
+
+    overflow: hidden !important;
+}
+
+
+/* Panel element wrappers */
+
+.st-key-app_body
+[data-testid="stElementContainer"]:has(
+    .st-key-left_panel_shell
+),
+.st-key-app_body
+[data-testid="stElementContainer"]:has(
+    .st-key-main_panel_shell
+),
+.st-key-app_body
+[data-testid="stLayoutWrapper"]:has(
+    .st-key-left_panel_shell
+),
+.st-key-app_body
+[data-testid="stLayoutWrapper"]:has(
+    .st-key-main_panel_shell
+) {
+    width: 100% !important;
+
+    height: 100% !important;
+    min-height: 0 !important;
+
+    overflow: hidden !important;
+}
+
+
+/* =========================================================
+   White panel shells
+   ========================================================= */
+
+.st-key-left_panel_shell,
+.st-key-main_panel_shell {
+    width: 100% !important;
+
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: none !important;
+
+    margin: 0 !important;
+
+    background: var(--panel-background) !important;
+
+    border:
+        1px
+        solid
+        var(--border-color) !important;
+
+    border-radius: 12px !important;
+
+    box-shadow:
+        0 2px 8px
+        rgba(24, 54, 79, 0.05);
+
+    overflow: hidden !important;
+}
+
+.st-key-left_panel_shell {
+    padding: 14px !important;
+}
+
+.st-key-main_panel_shell {
+    padding: 11px !important;
+
+    display: flex !important;
+    flex-direction: column !important;
+
+    gap: 0 !important;
+}
+
+
+/* =========================================================
+   Left information panel
+   ========================================================= */
+
+.st-key-left_panel_shell
+> [data-testid="stElementContainer"],
+.st-key-left_panel_shell
+[data-testid="stHtml"] {
+    width: 100% !important;
+
+    height: 100% !important;
+    min-height: 0 !important;
+}
+
+.sjk-left-panel-content {
+    width: 100%;
+
+    height: 100%;
+    min-height: 0;
+
+    display: flex;
+    flex-direction: column;
+}
+
+.sjk-card {
+    padding: 17px;
+
+    background: var(--card-background);
+
+    border:
+        1px
+        solid
+        #e7edf2;
+
+    border-radius: 14px;
+}
+
+.announcements-card {
+    min-height: 145px;
+}
+
+.announcements-card h2 {
+    margin: 0 0 15px;
+
+    color: var(--sjk-blue);
+
+    font-size: clamp(
+        1.3rem,
+        1.65vw,
+        1.7rem
+    );
+
+    font-weight: 750;
+    line-height: 1.15;
+}
+
+.announcements-card p {
+    margin: 0;
+
+    color: var(--text-primary);
+
+    font-size: 0.98rem;
+    line-height: 1.5;
+}
+
+.sjk-panel-spacer {
+    flex: 1 1 auto;
+
+    min-height: 25px;
+}
+
+.privacy-card {
+    flex: 0 0 auto;
+
+    margin-top: auto;
+}
+
+.privacy-heading {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    margin-bottom: 9px;
+
+    color: var(--sjk-blue);
+
+    font-size: 1rem;
+    font-weight: 750;
+}
+
+.privacy-card p {
+    margin: 0;
+
+    color: var(--text-primary);
+
+    font-size: 0.92rem;
+    font-weight: 600;
+    line-height: 1.5;
+}
+
+.privacy-icon {
+    width: 22px;
+    height: 22px;
+
+    object-fit: contain;
+}
+
+.privacy-icon-fallback {
+    font-size: 1.2rem;
+}
+
+
+/* =========================================================
+   Chat page structure
+   ========================================================= */
+
+/*
+The chat_page container and wrappers fill the main panel.
+*/
+
+.st-key-main_panel_shell
+[data-testid="stElementContainer"]:has(
+    .st-key-chat_page
+),
+.st-key-main_panel_shell
+[data-testid="stLayoutWrapper"]:has(
+    .st-key-chat_page
+) {
+    flex: 1 1 0 !important;
+
+    width: 100% !important;
+
+    height: 100% !important;
+    min-height: 0 !important;
+
+    overflow: hidden !important;
+}
+
+.st-key-chat_page {
+    width: 100% !important;
+
+    height: 100% !important;
+    min-height: 0 !important;
+
+    display: flex !important;
+    flex-direction: column !important;
+
+    gap: 8px !important;
+
+    overflow: hidden !important;
+}
+
+
+/* =========================================================
+   Scrollable conversation
+   ========================================================= */
+
+/*
+Handle both possible wrapper types generated by Streamlit.
+*/
+
+.st-key-chat_page
+> [data-testid="stElementContainer"]:has(
+    .st-key-chat_scroll_area
+),
+.st-key-chat_page
+> [data-testid="stLayoutWrapper"]:has(
+    .st-key-chat_scroll_area
+),
+.st-key-main_panel_shell
+[data-testid="stLayoutWrapper"]:has(
+    .st-key-chat_scroll_area
+) {
+    flex: 1 1 0 !important;
+
+    width: 100% !important;
+
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+
+    overflow: hidden !important;
+}
+
+.st-key-chat_scroll_area {
+    width: 100% !important;
+
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: none !important;
+
+    padding:
+        14px
+        16px
+        18px !important;
+
+    background: var(--chat-background) !important;
+
+    border:
+        1px
+        solid
+        #e3e9ee !important;
+
+    border-radius: 15px !important;
+
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+
+    scroll-behavior: smooth;
+
+    scrollbar-width: thin;
+    scrollbar-color:
+        var(--scrollbar-color)
+        transparent;
+}
+
+
+/*
+The chat content may be at least as tall as the viewport,
+but individual messages remain content-height.
+*/
+
+.st-key-chat_scroll_area
+> [data-testid="stVerticalBlock"] {
+    width: 100% !important;
+
+    height: auto !important;
+    min-height: 100% !important;
+    max-height: none !important;
+
+    overflow: visible !important;
+}
+
+.st-key-chat_scroll_area::-webkit-scrollbar {
+    width: 7px;
+}
+
+.st-key-chat_scroll_area::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.st-key-chat_scroll_area::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-color);
+
+    border-radius: 999px;
+}
+
+.st-key-chat_scroll_area::-webkit-scrollbar-thumb:hover {
+    background: #81909e;
+}
+
+
+/* =========================================================
+   Greeting
+   ========================================================= */
+
+.sjk-greeting {
+    min-height: 72px;
+
+    margin:
+        10px
+        0
+        24px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+
+    text-align: center;
+    white-space: nowrap;
+
+    font-size: clamp(
+        2rem,
+        3.4vw,
+        3.35rem
+    );
+
+    font-weight: 700;
+    line-height: 1.05;
+}
+
+.sjk-greeting-time,
+.sjk-typewriter-reserve,
+.sjk-typewriter-text {
+    color: var(--sjk-gold);
+
+    font-family:
+        "Brush Script MT",
+        "Segoe Script",
+        cursive;
+
+    font-style: italic;
+    font-weight: 700;
+}
+
+.sjk-greeting-eagles {
+    color: #000000;
+
+    font-family:
+        "Brush Script MT",
+        "Segoe Script",
+        cursive;
+
+    font-style: italic;
+    font-weight: 700;
+}
+
+
+/* Reserve final greeting width during animation */
+
+.sjk-typewriter-shell {
+    position: relative;
+
+    display: inline-block;
+}
+
+.sjk-typewriter-reserve {
+    visibility: hidden;
+
+    white-space: nowrap;
+}
+
+.sjk-typewriter-text {
+    position: absolute;
+    top: 0;
+    left: 0;
+
+    width: 0;
+
+    overflow: hidden;
+    white-space: nowrap;
+
+    border-right:
+        3px
+        solid
+        var(--sjk-gold);
+
+    animation:
+        sjkTyping
+        1.45s
+        steps(var(--sjk-character-count), end)
+        0.2s
+        forwards,
+
+        sjkCaret
+        0.6s
+        step-end
+        0.2s
+        3,
+
+        sjkRemoveCaret
+        0.01s
+        linear
+        2s
+        forwards;
+}
+
+@keyframes sjkTyping {
+    from {
+        width: 0;
+    }
+
+    to {
+        width: 100%;
+    }
+}
+
+@keyframes sjkCaret {
+    0%,
+    100% {
+        border-color: var(--sjk-gold);
+    }
+
+    50% {
+        border-color: transparent;
+    }
+}
+
+@keyframes sjkRemoveCaret {
+    to {
+        border-color: transparent;
+    }
+}
+
+.sjk-eagle {
+    width: 53px;
+    max-height: 53px;
+
+    object-fit: contain;
+}
+
+.sjk-eagle-fallback {
+    font-size: 2.4rem;
+}
+
+
+/* =========================================================
+   Chat message-row reset
+   ========================================================= */
+
+/*
+These horizontal blocks are individual chat messages.
+
+They must use content height instead of inheriting the
+full-height page-column rules.
+*/
+
+.st-key-chat_scroll_area
+[data-testid="stHorizontalBlock"] {
+    width: 100% !important;
+
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+
+    align-items: flex-start !important;
+
+    gap: 0.45rem !important;
+
+    overflow: visible !important;
+}
+
+
+/* Nested message columns */
+
+.st-key-chat_scroll_area
+[data-testid="stColumn"] {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+
+    align-self: flex-start !important;
+
+    overflow: visible !important;
+}
+
+.st-key-chat_scroll_area
+[data-testid="stColumn"]
+> [data-testid="stVerticalBlock"] {
+    width: 100% !important;
+
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+
+    display: flex !important;
+    flex-direction: column !important;
+
+    overflow: visible !important;
+}
+
+
+/* =========================================================
+   Message avatars
+   ========================================================= */
+
+.sjk-message-avatar-wrapper {
+    width: 100%;
+
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+
+    padding-top: 4px;
+}
+
+.sjk-message-avatar-image {
+    width: 30px;
+    height: 30px;
+
+    object-fit: contain;
+}
+
+.sjk-student-avatar,
+.sjk-fallback-avatar {
+    width: 30px;
+    height: 30px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background: #ffffff;
+
+    border:
+        1px
+        solid
+        #cbd6df;
+
+    border-radius: 8px;
+}
+
+.sjk-user-avatar-wrapper {
+    justify-content: flex-end;
+}
+
+
+/* =========================================================
+   Assistant message bubbles
+   ========================================================= */
+
+.st-key-chat_scroll_area
+[class*="st-key-assistant_message_"] {
+    display: block !important;
+
+    width: fit-content !important;
+    max-width: min(80%, 900px) !important;
+
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+
+    margin:
+        0
+        auto
+        12px
+        0 !important;
+
+    padding:
+        10px
+        15px !important;
+
+    background:
+        var(--assistant-background) !important;
+
+    border:
+        1px
+        solid
+        var(--assistant-border) !important;
+
+    border-radius:
+        5px
+        17px
+        17px
+        17px !important;
+
+    color: var(--text-primary);
+
+    overflow: visible !important;
+    overflow-wrap: anywhere;
+}
+
+
+/* =========================================================
+   Student message bubbles
+   ========================================================= */
+
+.st-key-chat_scroll_area
+[class*="st-key-user_message_"] {
+    display: block !important;
+
+    width: fit-content !important;
+    max-width: min(72%, 760px) !important;
+
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+
+    margin:
+        0
+        0
+        12px
+        auto !important;
+
+    padding:
+        9px
+        15px !important;
+
+    background:
+        var(--student-background) !important;
+
+    border:
+        1px
+        solid
+        var(--student-border) !important;
+
+    border-radius:
+        17px
+        5px
+        17px
+        17px !important;
+
+    color: var(--text-primary);
+
+    overflow: visible !important;
+    overflow-wrap: anywhere;
+}
+
+
+/* =========================================================
+   Bubble inner-wrapper reset
+   ========================================================= */
+
+/*
+This section fixes the unexpected assistant-message height.
+*/
+
+.st-key-chat_scroll_area
+[class*="st-key-assistant_message_"]
+> div,
+.st-key-chat_scroll_area
+[class*="st-key-user_message_"]
+> div,
+.st-key-chat_scroll_area
+[class*="st-key-assistant_message_"]
+[data-testid="stVerticalBlock"],
+.st-key-chat_scroll_area
+[class*="st-key-user_message_"]
+[data-testid="stVerticalBlock"],
+.st-key-chat_scroll_area
+[class*="st-key-assistant_message_"]
+[data-testid="stElementContainer"],
+.st-key-chat_scroll_area
+[class*="st-key-user_message_"]
+[data-testid="stElementContainer"],
+.st-key-chat_scroll_area
+[class*="st-key-assistant_message_"]
+[data-testid="stLayoutWrapper"],
+.st-key-chat_scroll_area
+[class*="st-key-user_message_"]
+[data-testid="stLayoutWrapper"] {
+    width: auto !important;
+
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+
+    margin: 0 !important;
+
+    flex: 0 0 auto !important;
+
+    overflow: visible !important;
+}
+
+
+/* Markdown containers inside messages */
+
+.st-key-chat_scroll_area
+[class*="st-key-assistant_message_"]
+[data-testid="stMarkdownContainer"],
+.st-key-chat_scroll_area
+[class*="st-key-user_message_"]
+[data-testid="stMarkdownContainer"] {
+    width: auto !important;
+
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    overflow: visible !important;
+}
+
+
+/* Message paragraph spacing */
+
+.st-key-chat_scroll_area
+[class*="st-key-assistant_message_"] p,
+.st-key-chat_scroll_area
+[class*="st-key-user_message_"] p {
+    margin:
+        0
+        0
+        0.45rem
+        0 !important;
+
+    line-height: 1.42 !important;
+}
+
+.st-key-chat_scroll_area
+[class*="st-key-assistant_message_"] p:last-child,
+.st-key-chat_scroll_area
+[class*="st-key-user_message_"] p:last-child {
+    margin-bottom: 0 !important;
+}
+
+
+/* Assistant lists */
+
+.st-key-chat_scroll_area
+[class*="st-key-assistant_message_"] ul,
+.st-key-chat_scroll_area
+[class*="st-key-assistant_message_"] ol {
+    margin:
+        0.4rem
+        0
+        0.1rem !important;
+
+    padding-left: 1.35rem !important;
+}
+
+.st-key-chat_scroll_area
+[class*="st-key-assistant_message_"] li {
+    margin-bottom: 0.25rem;
+}
+
+
+/* Resource images */
+
+.st-key-chat_scroll_area
+[data-testid="stImage"] {
+    margin-top: 10px;
+}
+
+.st-key-chat_scroll_area
+[data-testid="stImage"] img {
+    max-width: 100%;
+
+    border-radius: 12px;
+}
+
+
+/* =========================================================
+   Chat input
+   ========================================================= */
+
+/*
+The input remains fixed at the bottom of chat_page.
+*/
+
+.st-key-chat_page
+> [data-testid="stElementContainer"]:has(
+    .st-key-sjk_support_chat
+) {
+    flex: 0 0 auto !important;
+
+    width: 100% !important;
+
+    height: auto !important;
+    min-height: 0 !important;
+
+    margin: 0 !important;
+
+    overflow: visible !important;
+}
+
+.st-key-sjk_support_chat {
+    width: 100%;
+
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+.st-key-sjk_support_chat
+[data-testid="stChatInput"] {
+    width: 100%;
+
+    min-height: 54px;
+    max-height: 118px;
+
+    background: #ffffff;
+
+    border:
+        1.5px
+        solid
+        var(--sjk-blue) !important;
+
+    border-radius: 27px;
+
+    box-shadow: none !important;
+    outline: none !important;
+
+    overflow: hidden;
+}
+
+
+/* Remove the internal BaseWeb border */
+
+.st-key-sjk_support_chat
+[data-testid="stChatInput"]
+div[data-baseweb="textarea"] {
+    background: transparent !important;
+
+    border: none !important;
+
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+
+/* Input focus */
+
+.st-key-sjk_support_chat
+[data-testid="stChatInput"]:focus-within {
+    border-color:
+        var(--sjk-blue-dark) !important;
+
+    box-shadow:
+        0 0 0 3px
+        rgba(8, 114, 173, 0.12) !important;
+}
+
+
+/* Input text area */
+
+.st-key-sjk_support_chat textarea {
+    min-height: 47px !important;
+    max-height: 104px !important;
+
+    padding:
+        13px
+        14px
+        10px
+        18px !important;
+
+    background: transparent !important;
+
+    border: none !important;
+
+    box-shadow: none !important;
+    outline: none !important;
+
+    color: var(--text-primary) !important;
+
+    font-size: 1rem !important;
+    line-height: 1.35 !important;
+
+    resize: none !important;
+}
+
+.st-key-sjk_support_chat textarea:focus {
+    border: none !important;
+
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+.st-key-sjk_support_chat textarea::placeholder {
+    color: var(--text-muted) !important;
+
+    opacity: 1;
+}
+
+
+/* Send button */
+
+.st-key-sjk_support_chat button {
+    width: 38px !important;
+    min-width: 38px !important;
+    height: 38px !important;
+
+    margin-right: 7px !important;
+
+    background: #edf3f7 !important;
+
+    border: none !important;
+    border-radius: 50% !important;
+
+    color: var(--sjk-blue) !important;
+
+    transition:
+        background-color 150ms ease,
+        transform 150ms ease;
+}
+
+.st-key-sjk_support_chat button:hover {
+    background: #dceaf3 !important;
+
+    transform: translateY(-1px);
+}
+
+.st-key-sjk_support_chat button:disabled {
+    background: #f0f2f4 !important;
+
+    color: #a4afb8 !important;
+}
+
+.st-key-chat_scroll_area {
+    scroll-behavior: smooth !important;
+    overflow-anchor: auto !important;
+}
+
+/* =========================================================
+   OLLAMA THINKING ANIMATION
+   ========================================================= */
+
+.sjk-thinking-loader {
+    display: flex !important;
+    align-items: center !important;
+
+    width: fit-content !important;
+    min-height: 54px !important;
+
+    padding: 8px 12px !important;
+
+    gap: 9px !important;
+
+    color: #52616b !important;
+
+    font-size: 0.8rem !important;
+    font-weight: 600 !important;
+}
+
+.sjk-thinking-loader img {
+    display: block !important;
+
+    width: 46px !important;
+    height: 46px !important;
+
+    object-fit: contain !important;
+}
+
+.sjk-thinking-loader strong {
+    color: #52616b !important;
+
+    font-size: 0.8rem !important;
+    font-weight: 600 !important;
+
+    white-space: nowrap !important;
+}
+
+
+/* Fallback dots if the GIF file cannot be found */
+
+.sjk-thinking-loader span {
+    display: block !important;
+
+    width: 7px !important;
+    height: 7px !important;
+
+    background: #0872ad !important;
+    border-radius: 50% !important;
+
+    animation:
+        sjk-thinking-bounce
+        1.2s
+        infinite
+        ease-in-out !important;
+}
+
+.sjk-thinking-loader span:nth-child(1) {
+    animation-delay: 0s !important;
+}
+
+.sjk-thinking-loader span:nth-child(2) {
+    animation-delay: 0.15s !important;
+}
+
+.sjk-thinking-loader span:nth-child(3) {
+    animation-delay: 0.3s !important;
+}
+
+@keyframes sjk-thinking-bounce {
+    0%,
+    60%,
+    100% {
+        transform: translateY(0);
+        opacity: 0.4;
+    }
+
+    30% {
+        transform: translateY(-5px);
+        opacity: 1;
+    }
+}
+
+
+/* Mobile loader */
+
+@media (max-width: 899px) {
+    .sjk-thinking-loader {
+        min-height: 45px !important;
+
+        padding: 6px 8px !important;
+
+        gap: 7px !important;
+    }
+
+    .sjk-thinking-loader img {
+        width: 38px !important;
+        height: 38px !important;
+    }
+
+    .sjk-thinking-loader strong {
+        font-size: 0.75rem !important;
+    }
+}
+
+/* =========================================================
+   Standard Streamlit buttons
+   ========================================================= */
+
+.stButton > button {
+    border:
+        1px
+        solid
+        var(--sjk-blue);
+
+    border-radius: 9px;
+
+    background: #ffffff;
+    color: var(--sjk-blue);
+
+    font-weight: 650;
+}
+
+.stButton > button:hover {
+    border-color: var(--sjk-blue-dark);
+
+    background: #edf5fb;
+    color: var(--sjk-blue-dark);
+}
+
+
+/* =========================================================
+   Medium displays
+   ========================================================= */
+
+@media (max-width: 1150px) {
+    :root {
+        --header-height: 96px;
+    }
+
+    .sjk-wordmark {
+        width: 150px;
+    }
+
+    .sjk-main-title {
+        font-size: 3.15rem;
+    }
+
+    .sjk-greeting {
+        font-size: clamp(
+            1.8rem,
+            4vw,
+            2.7rem
+        );
+    }
+
+    .sjk-eagle {
+        width: 47px;
+        max-height: 47px;
+    }
+
+    .announcements-card h2 {
+        font-size: 1.3rem;
+    }
+
+    .announcements-card p,
+    .privacy-card p {
+        font-size: 0.88rem;
+    }
+
+    .st-key-chat_scroll_area
+    [class*="st-key-assistant_message_"] {
+        max-width: 86% !important;
+    }
+
+    .st-key-chat_scroll_area
+    [class*="st-key-user_message_"] {
+        max-width: 78% !important;
+    }
+}
+
+
+/* =========================================================
+   Mobile layout
+   ========================================================= */
+
+@media (max-width: 899px) {
+    :root {
+        --header-height: 74px;
+        --page-gap: 6px;
+    }
+
+
+    /* Compact mobile header */
+
+    .sjk-header {
+        padding:
+            0
+            0.65rem !important;
+
+        grid-template-columns:
+            68px
+            1fr !important;
+
+        gap: 7px !important;
+    }
+
+    .sjk-header-right {
+        display: none;
+    }
+
+    .sjk-wordmark {
+        width: 64px;
+        max-height: 57px;
+    }
+
+    .sjk-main-title {
+        font-size: clamp(
+            1.45rem,
+            8vw,
+            2.1rem
+        );
+    }
+
+    .sjk-subtitle {
+        margin-top: 4px;
+
+        font-size: 0.55rem;
+    }
+
+
+    /* Hide desktop information panel */
+
+    .st-key-app_body
+    [data-testid="stColumn"]:has(
+        .st-key-left_panel_shell
+    ) {
+        display: none !important;
+    }
+
+
+    /* Main chat becomes full width */
+
+    .st-key-app_body
+    [data-testid="stHorizontalBlock"]:has(
+        .st-key-main_panel_shell
+    ) {
+        display: block !important;
+    }
+
+    .st-key-app_body
+    [data-testid="stColumn"]:has(
+        .st-key-main_panel_shell
+    ) {
+        display: block !important;
+
+        width: 100% !important;
+        min-width: 100% !important;
+        max-width: 100% !important;
+
+        height: 100% !important;
+
+        flex: 1 1 100% !important;
+
+        overflow: hidden !important;
+    }
+
+    .st-key-main_panel_shell {
+        padding: 6px !important;
+
+        border-radius: 9px !important;
+    }
+
+
+    /* Floating mobile school-information button */
+
+    .st-key-mobile_info_bar {
+        display: block !important;
+
+        position: fixed !important;
+
+        top:
+            calc(
+                var(--header-height) + 12px
+            );
+
+        right: 12px;
+
+        width: auto !important;
+
+        z-index: 9999;
+    }
+
+    .st-key-mobile_info_popover button {
+        min-height: 38px;
+
+        padding:
+            0.4rem
+            0.7rem !important;
+
+        background:
+            rgba(
+                255,
+                255,
+                255,
+                0.97
+            ) !important;
+
+        border:
+            1px
+            solid
+            var(--sjk-blue) !important;
+
+        border-radius: 999px !important;
+
+        box-shadow:
+            0 5px 14px
+            rgba(27, 56, 79, 0.18);
+
+        color: var(--sjk-blue) !important;
+
+        font-size: 0.8rem;
+        font-weight: 700;
+    }
+
+
+    /* Mobile popover */
+
+    div[data-testid="stPopoverBody"] {
+        width:
+            min(
+                92vw,
+                350px
+            ) !important;
+
+        max-width:
+            min(
+                92vw,
+                350px
+            ) !important;
+
+        padding: 15px !important;
+
+        background: #ffffff;
+
+        border:
+            1px
+            solid
+            var(--border-color);
+
+        border-radius: 14px;
+
+        box-shadow:
+            0 14px 35px
+            rgba(20, 45, 65, 0.22);
+    }
+
+
+    /* Mobile greeting */
+
+    .sjk-greeting {
+        min-height: 50px;
+
+        margin:
+            8px
+            0
+            18px;
+
+        gap: 5px;
+
+        font-size: clamp(
+            1.35rem,
+            7.5vw,
+            2rem
+        );
+
+        white-space: normal;
+        flex-wrap: wrap;
+    }
+
+    .sjk-eagle {
+        width: 32px;
+        max-height: 32px;
+    }
+
+
+    /*
+    Extra top padding prevents the floating School Info
+    button from covering the greeting.
+    */
+
+    .st-key-chat_scroll_area {
+        padding:
+            52px
+            8px
+            12px !important;
+
+        border-radius: 11px !important;
+    }
+
+
+    /* Mobile avatars */
+
+    .sjk-message-avatar-image,
+    .sjk-student-avatar,
+    .sjk-fallback-avatar {
+        width: 26px;
+        height: 26px;
+    }
+
+
+    /* Mobile message bubbles */
+
+    .st-key-chat_scroll_area
+    [class*="st-key-assistant_message_"] {
+        max-width: 91% !important;
+
+        padding:
+            9px
+            12px !important;
+
+        font-size: 0.92rem;
+    }
+
+    .st-key-chat_scroll_area
+    [class*="st-key-user_message_"] {
+        max-width: 86% !important;
+
+        padding:
+            9px
+            12px !important;
+
+        font-size: 0.92rem;
+    }
+
+
+    /* Mobile chat input */
+
+    .st-key-sjk_support_chat
+    [data-testid="stChatInput"] {
+        min-height: 49px;
+
+        border-radius: 24px;
+    }
+
+    .st-key-sjk_support_chat textarea {
+        min-height: 43px !important;
+
+        padding:
+            11px
+            10px
+            9px
+            14px !important;
+
+        font-size: 0.94rem !important;
+    }
+
+    .st-key-sjk_support_chat button {
+        width: 34px !important;
+        min-width: 34px !important;
+        height: 34px !important;
+    }
+}
+
+
+/* =========================================================
+   Very small phones
+   ========================================================= */
+
+@media (max-width: 520px) {
+    .sjk-header {
+        grid-template-columns:
+            61px
+            1fr !important;
+    }
+
+    .sjk-wordmark {
+        width: 58px;
+    }
+
+    .sjk-main-title {
+        font-size: 1.4rem;
+    }
+
+    .sjk-subtitle {
+        font-size: 0.51rem;
+    }
+
+    .sjk-greeting {
+        font-size: clamp(
+            1.25rem,
+            7.7vw,
+            1.8rem
+        );
+    }
+
+    .sjk-eagle {
+        width: 29px;
+        max-height: 29px;
+    }
+}
+
+
+/* =========================================================
+   Reduced-motion accessibility
+   ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        scroll-behavior: auto !important;
+
+        animation-duration:
+            0.01ms !important;
+
+        animation-iteration-count:
+            1 !important;
+
+        transition-duration:
+            0.01ms !important;
+    }
+
+    .sjk-typewriter-text {
+        width: 100%;
+
+        border-color: transparent;
+    }
+}
+
+/* =========================================================
+   FINAL PANEL AND CHAT HEIGHT FIX
+   Keep this at the END of styles.css
+   ========================================================= */
+
+
+/* ---------------------------------------------------------
+   Root page height
+   --------------------------------------------------------- */
+
+html,
+body,
+.stApp,
+[data-testid="stAppViewContainer"],
+[data-testid="stMain"],
+[data-testid="stMainBlockContainer"],
+.block-container {
+    width: 100% !important;
+
+    height: 100vh !important;
+    height: 100dvh !important;
+
+    min-height: 0 !important;
+    max-height: 100dvh !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    overflow: hidden !important;
+}
+
+
+/* Root Streamlit page stack */
+
+.block-container
+> [data-testid="stVerticalBlock"] {
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+
+    display: flex !important;
+    flex-direction: column !important;
+
+    gap: 0 !important;
+
+    overflow: hidden !important;
+}
+
+
+/* ---------------------------------------------------------
+   Header stays fixed
+   --------------------------------------------------------- */
+
+.block-container
+> [data-testid="stVerticalBlock"]
+> [data-testid="stElementContainer"]:has(
+    .sjk-header
+) {
+    flex: 0 0 var(--header-height) !important;
+
+    width: 100% !important;
+    height: var(--header-height) !important;
+    min-height: var(--header-height) !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+
+/* ---------------------------------------------------------
+   App body takes all remaining height
+   --------------------------------------------------------- */
+
+.block-container
+> [data-testid="stVerticalBlock"]
+> [data-testid="stElementContainer"]:has(
+    .st-key-app_body
+) {
+    flex: 1 1 0 !important;
+
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    overflow: hidden !important;
+}
+
+
+.block-container
+> [data-testid="stVerticalBlock"]
+> [data-testid="stElementContainer"]:has(
+    .st-key-app_body
+)
+> [data-testid="stLayoutWrapper"] {
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+
+    overflow: hidden !important;
+}
+
+
+.st-key-app_body {
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+
+    padding:
+        var(--page-gap)
+        var(--page-gap)
+        var(--page-gap)
+        var(--page-gap) !important;
+
+    overflow: hidden !important;
+}
+
+
+/* ---------------------------------------------------------
+   Only the MAIN two-column row gets full height
+   --------------------------------------------------------- */
+
+.st-key-app_body
+[data-testid="stHorizontalBlock"]:has(
+    .st-key-left_panel_shell
+):has(
+    .st-key-main_panel_shell
+) {
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+
+    align-items: stretch !important;
+
+    overflow: hidden !important;
+}
+
+
+/* Only the two outer columns get full height */
+
+.st-key-app_body
+[data-testid="stColumn"]:has(
+    .st-key-left_panel_shell
+),
+.st-key-app_body
+[data-testid="stColumn"]:has(
+    .st-key-main_panel_shell
+) {
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: none !important;
+
+    align-self: stretch !important;
+
+    overflow: hidden !important;
+}
+
+
+.st-key-app_body
+[data-testid="stColumn"]:has(
+    .st-key-left_panel_shell
+)
+> [data-testid="stVerticalBlock"],
+.st-key-app_body
+[data-testid="stColumn"]:has(
+    .st-key-main_panel_shell
+)
+> [data-testid="stVerticalBlock"] {
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+
+    overflow: hidden !important;
+}
+
+
+/* ---------------------------------------------------------
+   Left and main panel shells
+   --------------------------------------------------------- */
+
+.st-key-app_body
+[data-testid="stElementContainer"]:has(
+    .st-key-left_panel_shell
+),
+.st-key-app_body
+[data-testid="stElementContainer"]:has(
+    .st-key-main_panel_shell
+),
+.st-key-app_body
+[data-testid="stLayoutWrapper"]:has(
+    .st-key-left_panel_shell
+),
+.st-key-app_body
+[data-testid="stLayoutWrapper"]:has(
+    .st-key-main_panel_shell
+) {
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+
+    overflow: hidden !important;
+}
+
+
+.st-key-left_panel_shell,
+.st-key-main_panel_shell {
+    width: 100% !important;
+
+    height: calc(
+        100dvh
+        - var(--header-height)
+        - var(--page-gap)
+        - var(--page-gap)
+    ) !important;
+
+    min-height: 0 !important;
+    max-height: none !important;
+
+    margin: 0 !important;
+
+    overflow: hidden !important;
+}
+
+
+/* Left panel internal height */
+
+.st-key-left_panel_shell
+> [data-testid="stElementContainer"],
+.st-key-left_panel_shell
+> [data-testid="stLayoutWrapper"],
+.st-key-left_panel_shell
+[data-testid="stHtml"],
+.sjk-left-panel-content {
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+}
+
+
+.sjk-left-panel-content {
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+
+.sjk-panel-spacer {
+    flex: 1 1 auto !important;
+    min-height: 20px !important;
+}
+
+
+.privacy-card {
+    flex: 0 0 auto !important;
+    margin-top: auto !important;
+}
+
+
+/* ---------------------------------------------------------
+   Main chat panel
+   --------------------------------------------------------- */
+
+.st-key-main_panel_shell {
+    display: flex !important;
+    flex-direction: column !important;
+
+    gap: 0 !important;
+}
+
+
+.st-key-main_panel_shell
+[data-testid="stElementContainer"]:has(
+    .st-key-chat_page
+),
+.st-key-main_panel_shell
+[data-testid="stLayoutWrapper"]:has(
+    .st-key-chat_page
+) {
+    flex: 1 1 0 !important;
+
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+
+    overflow: hidden !important;
+}
+
+
+.st-key-chat_page {
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+
+    display: flex !important;
+    flex-direction: column !important;
+
+    gap: 8px !important;
+
+    overflow: hidden !important;
+}
+
+
+/* ---------------------------------------------------------
+   Chat history uses remaining panel height
+   --------------------------------------------------------- */
+
+.st-key-chat_page
+> [data-testid="stElementContainer"]:has(
+    .st-key-chat_scroll_area
+),
+.st-key-chat_page
+> [data-testid="stLayoutWrapper"]:has(
+    .st-key-chat_scroll_area
+) {
+    flex: 1 1 0 !important;
+
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+
+    overflow: hidden !important;
+}
+
+
+.st-key-chat_scroll_area {
+    flex: 1 1 auto !important;
+
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: none !important;
+
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+}
+
+
+.st-key-chat_scroll_area
+> [data-testid="stVerticalBlock"] {
+    width: 100% !important;
+
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+
+    overflow: visible !important;
+}
+
+
+/* ---------------------------------------------------------
+   Chat input remains at the bottom
+   --------------------------------------------------------- */
+
+.st-key-chat_page
+> [data-testid="stElementContainer"]:has(
+    .st-key-sjk_support_chat
+),
+.st-key-chat_page
+> [data-testid="stLayoutWrapper"]:has(
+    .st-key-sjk_support_chat
+) {
+    flex: 0 0 auto !important;
+
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+
+    overflow: visible !important;
+}
+
+
+/* ---------------------------------------------------------
+   Reset individual message rows
+   --------------------------------------------------------- */
+
+.st-key-chat_scroll_area
+[data-testid="stHorizontalBlock"] {
+    width: 100% !important;
+
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+
+    align-items: flex-start !important;
+
+    overflow: visible !important;
+}
+
+
+.st-key-chat_scroll_area
+[data-testid="stColumn"] {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+
+    align-self: flex-start !important;
+
+    overflow: visible !important;
+}
+
+
+.st-key-chat_scroll_area
+[data-testid="stColumn"]
+> [data-testid="stVerticalBlock"] {
+    width: 100% !important;
+
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+
+    overflow: visible !important;
+}
+
+
+/* ---------------------------------------------------------
+   Message bubbles use content height
+   --------------------------------------------------------- */
+
+.st-key-chat_scroll_area
+[class*="st-key-assistant_message_"],
+.st-key-chat_scroll_area
+[class*="st-key-user_message_"] {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+
+    flex: 0 0 auto !important;
+
+    overflow: visible !important;
+}
+
+
+.st-key-chat_scroll_area
+[class*="st-key-assistant_message_"] {
+    width: fit-content !important;
+    max-width: 80% !important;
+
+    margin: 0 auto 12px 0 !important;
+}
+
+
+.st-key-chat_scroll_area
+[class*="st-key-user_message_"] {
+    width: fit-content !important;
+    max-width: 72% !important;
+
+    margin: 0 0 12px auto !important;
+}
+
+
+/* Reset Streamlit wrappers inside bubbles */
+
+.st-key-chat_scroll_area
+[class*="st-key-assistant_message_"]
+> div,
+.st-key-chat_scroll_area
+[class*="st-key-user_message_"]
+> div,
+.st-key-chat_scroll_area
+[class*="st-key-assistant_message_"]
+[data-testid="stVerticalBlock"],
+.st-key-chat_scroll_area
+[class*="st-key-user_message_"]
+[data-testid="stVerticalBlock"],
+.st-key-chat_scroll_area
+[class*="st-key-assistant_message_"]
+[data-testid="stElementContainer"],
+.st-key-chat_scroll_area
+[class*="st-key-user_message_"]
+[data-testid="stElementContainer"] {
+    width: auto !important;
+
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+
+    flex: 0 0 auto !important;
+
+    overflow: visible !important;
+}
+
+
+/* ---------------------------------------------------------
+   Mobile
+   --------------------------------------------------------- */
+/* =========================================================
+   FINAL MOBILE UI FIX
+   Keep this at the END of styles.css
+   ========================================================= */
+
+@media (max-width: 899px) {
+    :root {
+        --header-height: 74px;
+        --page-gap: 5px;
+    }
+
+    /* -----------------------------------------------------
+       Mobile page and header
+       ----------------------------------------------------- */
+
+    html,
+    body,
+    .stApp,
+    [data-testid="stAppViewContainer"],
+    [data-testid="stMain"],
+    [data-testid="stMainBlockContainer"],
+    .block-container {
+        width: 100% !important;
+        height: 100dvh !important;
+        max-height: 100dvh !important;
+
+        margin: 0 !important;
+        padding: 0 !important;
+
+        overflow: hidden !important;
+    }
+
+    .sjk-header {
+        width: 100% !important;
+        height: var(--header-height) !important;
+        min-height: var(--header-height) !important;
+
+        margin: 0 !important;
+        padding: 0 12px !important;
+
+        grid-template-columns: 72px 1fr 72px !important;
+        gap: 5px !important;
+    }
+
+    .sjk-header-left {
+        width: 72px;
+    }
+
+    .sjk-header-right {
+        display: block !important;
+        width: 72px;
+    }
+
+    .sjk-wordmark {
+        width: 68px !important;
+        max-height: 56px !important;
+    }
+
+    .sjk-main-title {
+        font-size: clamp(1.7rem, 7vw, 2.15rem) !important;
+        letter-spacing: 0.035em !important;
+    }
+
+    .sjk-subtitle {
+        margin-top: 4px !important;
+        font-size: 0.58rem !important;
+    }
+
+
+    /* -----------------------------------------------------
+       Mobile application body
+       ----------------------------------------------------- */
+
+    .st-key-app_body {
+        width: 100% !important;
+        height: calc(
+            100dvh - var(--header-height)
+        ) !important;
+
+        padding: 5px !important;
+    }
+
+    /* Hide the desktop left information panel */
+    .st-key-app_body
+    [data-testid="stColumn"]:has(
+        .st-key-left_panel_shell
+    ) {
+        display: none !important;
+    }
+
+    /* Remove desktop column layout */
+    .st-key-app_body
+    [data-testid="stHorizontalBlock"]:has(
+        .st-key-main_panel_shell
+    ) {
+        display: block !important;
+
+        width: 100% !important;
+        height: 100% !important;
+
+        margin: 0 !important;
+    }
+
+    /* Chat panel uses full phone width */
+    .st-key-app_body
+    [data-testid="stColumn"]:has(
+        .st-key-main_panel_shell
+    ) {
+        display: block !important;
+
+        width: 100% !important;
+        min-width: 100% !important;
+        max-width: 100% !important;
+
+        height: 100% !important;
+
+        margin: 0 !important;
+
+        flex: 1 1 100% !important;
+    }
+
+    .st-key-main_panel_shell {
+        width: 100% !important;
+        height: 100% !important;
+
+        padding: 5px !important;
+
+        border-radius: 10px !important;
+    }
+
+
+    /* -----------------------------------------------------
+       Compact floating School Info button
+       ----------------------------------------------------- */
+
+    .st-key-mobile_info_bar {
+        display: block !important;
+
+        position: fixed !important;
+        top: calc(var(--header-height) + 12px);
+        right: 13px;
+
+        width: auto !important;
+        height: auto !important;
+
+        z-index: 10000;
+    }
+
+    .st-key-mobile_info_popover button {
+        width: auto !important;
+        min-width: 0 !important;
+        height: 39px !important;
+        min-height: 39px !important;
+
+        padding: 0 13px !important;
+
+        background: rgba(255, 255, 255, 0.97) !important;
+        border: 1px solid var(--sjk-blue) !important;
+        border-radius: 20px !important;
+
+        box-shadow:
+            0 4px 12px rgba(20, 55, 80, 0.16) !important;
+
+        color: var(--sjk-blue) !important;
+
+        font-size: 0.8rem !important;
+        font-weight: 700 !important;
+    }
+
+    div[data-testid="stPopoverBody"] {
+        width: min(90vw, 340px) !important;
+        max-width: min(90vw, 340px) !important;
+
+        padding: 16px !important;
+
+        background: #ffffff !important;
+        border: 1px solid var(--border-color) !important;
+        border-radius: 14px !important;
+
+        box-shadow:
+            0 14px 32px rgba(20, 45, 65, 0.24) !important;
+    }
+
+
+    /* -----------------------------------------------------
+       Mobile chat page
+       ----------------------------------------------------- */
+
+    .st-key-chat_page {
+        width: 100% !important;
+        height: 100% !important;
+        min-height: 0 !important;
+
+        gap: 6px !important;
+    }
+
+    .st-key-chat_page
+    > [data-testid="stElementContainer"]:has(
+        .st-key-chat_scroll_area
+    ),
+    .st-key-chat_page
+    > [data-testid="stLayoutWrapper"]:has(
+        .st-key-chat_scroll_area
+    ) {
+        flex: 1 1 0 !important;
+
+        width: 100% !important;
+        height: auto !important;
+        min-height: 0 !important;
+
+        overflow: hidden !important;
+    }
+
+    .st-key-chat_scroll_area {
+        width: 100% !important;
+        height: 100% !important;
+        min-height: 0 !important;
+
+        padding: 58px 10px 14px !important;
+
+        background: #f8fafc !important;
+        border: 1px solid #dfe6ec !important;
+        border-radius: 13px !important;
+
+        overflow-x: hidden !important;
+        overflow-y: auto !important;
+    }
+
+    .st-key-chat_scroll_area
+    > [data-testid="stVerticalBlock"] {
+        width: 100% !important;
+
+        height: auto !important;
+        min-height: 0 !important;
+
+        gap: 8px !important;
+    }
+
+
+    /* -----------------------------------------------------
+       Greeting
+       ----------------------------------------------------- */
+
+    .sjk-greeting {
+        min-height: 45px !important;
+
+        margin: 4px 0 20px !important;
+
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        flex-wrap: nowrap !important;
+
+        gap: 5px !important;
+
+        font-size: clamp(
+            1.45rem,
+            6.8vw,
+            2rem
+        ) !important;
+
+        white-space: nowrap !important;
+    }
+
+    .sjk-eagle {
+        width: 34px !important;
+        height: auto !important;
+        max-height: 34px !important;
+    }
+
+
+    /* -----------------------------------------------------
+       Keep assistant avatar and bubble on one row
+       ----------------------------------------------------- */
+
+    .st-key-chat_scroll_area
+    [data-testid="stHorizontalBlock"]:has(
+        [class*="st-key-assistant_message_"]
+    ) {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+
+        width: 100% !important;
+        height: auto !important;
+
+        align-items: flex-start !important;
+        gap: 7px !important;
+    }
+
+    /* Assistant avatar column */
+    .st-key-chat_scroll_area
+    [data-testid="stHorizontalBlock"]:has(
+        [class*="st-key-assistant_message_"]
+    )
+    > [data-testid="stColumn"]:first-child {
+        width: 31px !important;
+        min-width: 31px !important;
+        max-width: 31px !important;
+
+        flex: 0 0 31px !important;
+    }
+
+    /* Assistant message column */
+    .st-key-chat_scroll_area
+    [data-testid="stHorizontalBlock"]:has(
+        [class*="st-key-assistant_message_"]
+    )
+    > [data-testid="stColumn"]:last-child {
+        width: auto !important;
+        min-width: 0 !important;
+        max-width: calc(100% - 38px) !important;
+
+        flex: 1 1 auto !important;
+    }
+
+
+    /* -----------------------------------------------------
+       Keep student bubble and avatar on one row
+       ----------------------------------------------------- */
+
+    .st-key-chat_scroll_area
+    [data-testid="stHorizontalBlock"]:has(
+        [class*="st-key-user_message_"]
+    ) {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+
+        width: 100% !important;
+        height: auto !important;
+
+        align-items: flex-start !important;
+        gap: 7px !important;
+    }
+
+    /* Student message column */
+    .st-key-chat_scroll_area
+    [data-testid="stHorizontalBlock"]:has(
+        [class*="st-key-user_message_"]
+    )
+    > [data-testid="stColumn"]:first-child {
+        width: auto !important;
+        min-width: 0 !important;
+        max-width: calc(100% - 38px) !important;
+
+        flex: 1 1 auto !important;
+    }
+
+    /* Student avatar column */
+    .st-key-chat_scroll_area
+    [data-testid="stHorizontalBlock"]:has(
+        [class*="st-key-user_message_"]
+    )
+    > [data-testid="stColumn"]:last-child {
+        width: 31px !important;
+        min-width: 31px !important;
+        max-width: 31px !important;
+
+        flex: 0 0 31px !important;
+    }
+
+
+    /* -----------------------------------------------------
+       Reset nested message column heights
+       ----------------------------------------------------- */
+
+    .st-key-chat_scroll_area
+    [data-testid="stHorizontalBlock"],
+    .st-key-chat_scroll_area
+    [data-testid="stColumn"],
+    .st-key-chat_scroll_area
+    [data-testid="stColumn"]
+    > [data-testid="stVerticalBlock"] {
+        height: auto !important;
+        min-height: 0 !important;
+        max-height: none !important;
+
+        overflow: visible !important;
+    }
+
+
+    /* -----------------------------------------------------
+       Message avatars
+       ----------------------------------------------------- */
+
+    .sjk-message-avatar-wrapper {
+        width: 30px !important;
+
+        padding-top: 3px !important;
+
+        justify-content: center !important;
+    }
+
+    .sjk-message-avatar-image {
+        width: 27px !important;
+        height: 27px !important;
+    }
+
+    .sjk-student-avatar,
+    .sjk-fallback-avatar {
+        width: 29px !important;
+        height: 29px !important;
+
+        font-size: 0.82rem !important;
+
+        border-radius: 8px !important;
+    }
+
+
+    /* -----------------------------------------------------
+       Assistant messages
+       ----------------------------------------------------- */
+
+    .st-key-chat_scroll_area
+    [class*="st-key-assistant_message_"] {
+        display: block !important;
+
+        width: fit-content !important;
+        max-width: 100% !important;
+
+        height: auto !important;
+        min-height: 0 !important;
+
+        margin: 0 auto 12px 0 !important;
+        padding: 11px 13px !important;
+
+        background: #e8eaed !important;
+        border: 1px solid #dde2e7 !important;
+
+        border-radius:
+            5px
+            16px
+            16px
+            16px !important;
+
+        font-size: 0.94rem !important;
+        line-height: 1.45 !important;
+    }
+
+
+    /* -----------------------------------------------------
+       Student messages
+       ----------------------------------------------------- */
+
+    .st-key-chat_scroll_area
+    [class*="st-key-user_message_"] {
+        display: block !important;
+
+        width: fit-content !important;
+        max-width: 100% !important;
+
+        height: auto !important;
+        min-height: 0 !important;
+
+        margin: 0 0 12px auto !important;
+        padding: 10px 14px !important;
+
+        background: #dceefa !important;
+        border: 1px solid #c6dfed !important;
+
+        border-radius:
+            16px
+            5px
+            16px
+            16px !important;
+
+        font-size: 0.94rem !important;
+        line-height: 1.4 !important;
+    }
+
+
+    /* -----------------------------------------------------
+       Reset bubble internals
+       ----------------------------------------------------- */
+
+    .st-key-chat_scroll_area
+    [class*="st-key-assistant_message_"]
+    > div,
+    .st-key-chat_scroll_area
+    [class*="st-key-user_message_"]
+    > div,
+    .st-key-chat_scroll_area
+    [class*="st-key-assistant_message_"]
+    [data-testid="stVerticalBlock"],
+    .st-key-chat_scroll_area
+    [class*="st-key-user_message_"]
+    [data-testid="stVerticalBlock"] {
+        width: auto !important;
+
+        height: auto !important;
+        min-height: 0 !important;
+
+        margin: 0 !important;
+
+        overflow: visible !important;
+    }
+
+    .st-key-chat_scroll_area
+    [class*="st-key-assistant_message_"] p,
+    .st-key-chat_scroll_area
+    [class*="st-key-user_message_"] p {
+        margin: 0 0 0.45rem !important;
+    }
+
+    .st-key-chat_scroll_area
+    [class*="st-key-assistant_message_"] p:last-child,
+    .st-key-chat_scroll_area
+    [class*="st-key-user_message_"] p:last-child {
+        margin-bottom: 0 !important;
+    }
+
+
+    /* -----------------------------------------------------
+       Mobile chat input
+       ----------------------------------------------------- */
+
+    .st-key-chat_page
+    > [data-testid="stElementContainer"]:has(
+        .st-key-sjk_support_chat
+    ),
+    .st-key-chat_page
+    > [data-testid="stLayoutWrapper"]:has(
+        .st-key-sjk_support_chat
+    ) {
+        flex: 0 0 auto !important;
+
+        width: 100% !important;
+        height: auto !important;
+    }
+
+    .st-key-sjk_support_chat {
+        width: 100% !important;
+
+        margin: 0 !important;
+    }
+
+    .st-key-sjk_support_chat
+    [data-testid="stChatInput"] {
+        width: 100% !important;
+
+        min-height: 50px !important;
+        max-height: 105px !important;
+
+        border: 1.5px solid var(--sjk-blue) !important;
+        border-radius: 25px !important;
+
+        background: #ffffff !important;
+
+        box-shadow: none !important;
+    }
+
+    .st-key-sjk_support_chat
+    [data-testid="stChatInput"]:focus-within {
+        box-shadow:
+            0 0 0 3px
+            rgba(8, 114, 173, 0.12) !important;
+    }
+
+    .st-key-sjk_support_chat textarea {
+        min-height: 44px !important;
+        max-height: 90px !important;
+
+        padding:
+            11px
+            10px
+            9px
+            15px !important;
+
+        font-size: 0.94rem !important;
+    }
+
+    .st-key-sjk_support_chat button {
+        width: 34px !important;
+        min-width: 34px !important;
+        height: 34px !important;
+
+        margin-right: 7px !important;
+    }
+}
+
+
+/* =========================================================
+   Very small phones
+   ========================================================= */
+
+@media (max-width: 430px) {
+    .sjk-header {
+        grid-template-columns:
+            62px
+            1fr
+            62px !important;
+
+        padding: 0 8px !important;
+    }
+
+    .sjk-wordmark {
+        width: 58px !important;
+    }
+
+    .sjk-main-title {
+        font-size: 1.55rem !important;
+    }
+
+    .sjk-subtitle {
+        font-size: 0.52rem !important;
+    }
+
+    .sjk-greeting {
+        font-size: clamp(
+            1.25rem,
+            6.4vw,
+            1.65rem
+        ) !important;
+    }
+
+    .sjk-eagle {
+        width: 28px !important;
+        max-height: 28px !important;
+    }
+
+    .st-key-chat_scroll_area {
+        padding:
+            55px
+            7px
+            11px !important;
+    }
+
+    .st-key-mobile_info_popover button {
+        height: 36px !important;
+        min-height: 36px !important;
+
+        padding: 0 11px !important;
+
+        font-size: 0.76rem !important;
+    }
+}
+
+/* =========================================================
+   CORRECTED LEFT PANEL ONLY
+   Keep this at the absolute END of styles.css
+   ========================================================= */
+
+/*
+Supports both left-panel structures:
+1. The original single HTML block: .sjk-left-panel-content
+2. The newer Streamlit container: .st-key-left_panel_content
+
+Nothing outside the left panel is changed.
+*/
+
+/* ---------- Shared left-panel shell ---------- */
+
+.st-key-left_panel_shell {
+    overflow: hidden !important;
+}
+
+.st-key-left_panel_shell
+> [data-testid="stVerticalBlock"],
+.st-key-left_panel_shell
+> [data-testid="stElementContainer"],
+.st-key-left_panel_shell
+> [data-testid="stLayoutWrapper"] {
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+}
+
+/* ---------- Original one-HTML layout support ---------- */
+
+.sjk-left-panel-content {
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+
+    display: grid !important;
+    grid-template-rows:
+        minmax(0, 1fr)
+        minmax(0, 1fr)
+        auto !important;
+
+    gap: 12px !important;
+    overflow: hidden !important;
+}
+
+.sjk-left-panel-content .sjk-card {
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    overflow: hidden !important;
+}
+
+.sjk-panel-spacer {
+    display: none !important;
+}
+
+/* ---------- New Streamlit container layout ---------- */
+
+.st-key-left_panel_content,
+.st-key-left_panel_content[data-testid="stVerticalBlock"],
+.st-key-left_panel_content
+> [data-testid="stVerticalBlock"] {
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+
+    overflow: hidden !important;
+}
+
+/* Announcements and inventory each receive half of the flexible height. */
+
+.st-key-left_panel_content
+[data-testid="stElementContainer"]:has(.sjk-announcements-card),
+.st-key-left_panel_content
+[data-testid="stLayoutWrapper"]:has(.sjk-announcements-card),
+.st-key-left_panel_content
+[data-testid="stElementContainer"]:has(.sjk-inventory-card),
+.st-key-left_panel_content
+[data-testid="stLayoutWrapper"]:has(.sjk-inventory-card),
+.st-key-left_panel_content
+[data-testid="stFragment"]:has(.sjk-inventory-card) {
+    flex: 1 1 0 !important;
+
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    overflow: hidden !important;
+}
+
+/* Privacy stays content-height at the bottom. */
+
+.st-key-left_panel_content
+[data-testid="stElementContainer"]:has(.sjk-privacy-card),
+.st-key-left_panel_content
+[data-testid="stLayoutWrapper"]:has(.sjk-privacy-card) {
+    flex: 0 0 auto !important;
+
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    overflow: hidden !important;
+}
+
+/* Fill all HTML and fragment wrappers inside the two flexible rows. */
+
+.st-key-left_panel_content
+[data-testid="stElementContainer"]:has(.sjk-announcements-card)
+[data-testid="stHtml"],
+.st-key-left_panel_content
+[data-testid="stLayoutWrapper"]:has(.sjk-announcements-card)
+[data-testid="stHtml"],
+.st-key-left_panel_content
+[data-testid="stElementContainer"]:has(.sjk-inventory-card)
+[data-testid="stHtml"],
+.st-key-left_panel_content
+[data-testid="stLayoutWrapper"]:has(.sjk-inventory-card)
+[data-testid="stHtml"],
+.st-key-left_panel_content
+[data-testid="stFragment"]:has(.sjk-inventory-card),
+.st-key-left_panel_content
+[data-testid="stFragment"]:has(.sjk-inventory-card)
+> [data-testid="stVerticalBlock"],
+.st-key-left_panel_content
+[data-testid="stFragment"]:has(.sjk-inventory-card)
+[data-testid="stElementContainer"],
+.st-key-left_panel_content
+[data-testid="stFragment"]:has(.sjk-inventory-card)
+[data-testid="stLayoutWrapper"],
+.st-key-left_panel_content
+[data-testid="stFragment"]:has(.sjk-inventory-card)
+[data-testid="stHtml"] {
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    overflow: hidden !important;
+}
+
+/* ---------- Shared card design ---------- */
+
+.sjk-announcements-card,
+.sjk-inventory-card,
+.sjk-privacy-card,
+.announcements-card,
+.inventory-card,
+.privacy-card {
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+
+    margin: 0 !important;
+
+    background: var(--card-background) !important;
+    border: 1px solid #e7edf2 !important;
+    border-radius: 14px !important;
+}
+
+.sjk-announcements-card,
+.sjk-inventory-card,
+.announcements-card,
+.inventory-card {
+    height: 100% !important;
+
+    display: flex !important;
+    flex-direction: column !important;
+
+    overflow: hidden !important;
+}
+
+.sjk-announcements-card,
+.announcements-card {
+    padding: 16px !important;
+}
+
+.sjk-inventory-card,
+.inventory-card {
+    padding: 14px !important;
+}
+
+.sjk-announcements-card h2,
+.sjk-inventory-card h2,
+.announcements-card h2,
+.inventory-card h2 {
+    flex: 0 0 auto !important;
+
+    margin: 0 !important;
+
+    color: var(--sjk-blue) !important;
+    font-size: clamp(1.15rem, 1.4vw, 1.55rem) !important;
+    font-weight: 750 !important;
+    line-height: 1.15 !important;
+}
+
+/* ---------- Announcements ---------- */
+
+.sjk-announcements-scroll,
+.announcement-content {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+
+    margin-top: 14px !important;
+    padding-right: 4px !important;
+
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-color) transparent;
+}
+
+.sjk-announcements-scroll p,
+.announcement-content p,
+.announcements-card p {
+    margin: 0 !important;
+
+    color: var(--text-primary) !important;
+    font-size: 0.94rem !important;
+    line-height: 1.5 !important;
+}
+
+/* ---------- Inventory header ---------- */
+
+.sjk-inventory-header,
+.inventory-card-header {
+    flex: 0 0 auto !important;
+
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+
+    gap: 8px !important;
+}
+
+.sjk-inventory-status,
+.inventory-status {
+    flex: 0 0 auto !important;
+
+    display: inline-flex !important;
+    align-items: center !important;
+
+    gap: 5px !important;
+    padding: 4px 7px !important;
+
+    border-radius: 999px !important;
+
+    font-size: 0.64rem !important;
+    font-weight: 750 !important;
+    letter-spacing: 0.04em !important;
+    text-transform: uppercase !important;
+    white-space: nowrap !important;
+}
+
+.sjk-inventory-dot,
+.inventory-status-dot {
+    width: 7px !important;
+    height: 7px !important;
+    border-radius: 50% !important;
+}
+
+.sjk-inventory-live,
+.inventory-status-live {
+    background: #e4f4e9 !important;
+    color: #1b7138 !important;
+}
+
+.sjk-inventory-live .sjk-inventory-dot,
+.inventory-status-live .inventory-status-dot {
+    background: #2d9c52 !important;
+    box-shadow: 0 0 0 3px rgba(45, 156, 82, 0.13) !important;
+}
+
+.sjk-inventory-offline,
+.inventory-status-offline {
+    background: #fdeaea !important;
+    color: #a33636 !important;
+}
+
+.sjk-inventory-offline .sjk-inventory-dot,
+.inventory-status-offline .inventory-status-dot {
+    background: #c94a4a !important;
+}
+
+/* ---------- Inventory summary and list ---------- */
+
+.sjk-inventory-summary,
+.inventory-summary {
+    flex: 0 0 auto !important;
+
+    margin: 8px 0 !important;
+
+    color: var(--text-muted) !important;
+    font-size: 0.73rem !important;
+    font-weight: 600 !important;
+    line-height: 1.3 !important;
+}
+
+.sjk-inventory-scroll,
+.inventory-list {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+
+    padding-right: 4px !important;
+
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-color) transparent;
+}
+
+.sjk-inventory-scroll::-webkit-scrollbar,
+.inventory-list::-webkit-scrollbar,
+.sjk-announcements-scroll::-webkit-scrollbar,
+.announcement-content::-webkit-scrollbar {
+    width: 5px;
+}
+
+.sjk-inventory-scroll::-webkit-scrollbar-track,
+.inventory-list::-webkit-scrollbar-track,
+.sjk-announcements-scroll::-webkit-scrollbar-track,
+.announcement-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.sjk-inventory-scroll::-webkit-scrollbar-thumb,
+.inventory-list::-webkit-scrollbar-thumb,
+.sjk-announcements-scroll::-webkit-scrollbar-thumb,
+.announcement-content::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-color);
+    border-radius: 999px;
+}
+
+/* ---------- Inventory rows ---------- */
+
+.sjk-inventory-row,
+.inventory-item-row {
+    width: 100% !important;
+
+    padding: 7px 1px !important;
+
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+
+    gap: 7px !important;
+
+    border-bottom: 1px solid #dde5eb !important;
+}
+
+.sjk-inventory-row:last-child,
+.inventory-item-row:last-child {
+    border-bottom: none !important;
+}
+
+.sjk-inventory-item-info,
+.inventory-item-details {
+    min-width: 0 !important;
+
+    display: flex !important;
+    flex-direction: column !important;
+
+    gap: 2px !important;
+}
+
+.sjk-inventory-item-name,
+.inventory-item-name {
+    color: var(--text-primary) !important;
+    font-size: 0.76rem !important;
+    font-weight: 700 !important;
+    line-height: 1.2 !important;
+    overflow-wrap: anywhere !important;
+}
+
+.sjk-inventory-item-meta,
+.inventory-item-secondary {
+    color: var(--text-muted) !important;
+    font-size: 0.61rem !important;
+    line-height: 1.2 !important;
+}
+
+.sjk-inventory-count,
+.inventory-item-count {
+    flex: 0 0 auto !important;
+
+    padding: 3px 6px !important;
+
+    background: #e4f3e9 !important;
+    color: #1c7139 !important;
+
+    border-radius: 999px !important;
+
+    font-size: 0.61rem !important;
+    font-weight: 750 !important;
+    white-space: nowrap !important;
+}
+
+.sjk-inventory-unavailable,
+.inventory-item-unavailable {
+    opacity: 0.58 !important;
+}
+
+.sjk-inventory-unavailable .sjk-inventory-count,
+.inventory-item-unavailable .inventory-item-count {
+    background: #e7ebee !important;
+    color: #67737d !important;
+}
+
+/* ---------- Inventory footer and errors ---------- */
+
+.sjk-inventory-refresh-text,
+.inventory-footer {
+    flex: 0 0 auto !important;
+
+    margin-top: 6px !important;
+    padding-top: 6px !important;
+
+    border-top: 1px solid #dde5eb !important;
+
+    color: var(--text-muted) !important;
+    font-size: 0.59rem !important;
+    line-height: 1.2 !important;
+    text-align: center !important;
+}
+
+.sjk-inventory-message,
+.inventory-empty-message,
+.inventory-error-message {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    padding: 10px !important;
+
+    color: var(--text-muted) !important;
+    font-size: 0.75rem !important;
+    line-height: 1.4 !important;
+    text-align: center !important;
+}
+
+.sjk-inventory-error,
+.inventory-error-message {
+    color: #914242 !important;
+}
+
+/* ---------- Privacy ---------- */
+
+.sjk-privacy-card,
+.privacy-card {
+    flex: 0 0 auto !important;
+    height: auto !important;
+
+    padding: 13px !important;
+
+    overflow: hidden !important;
+}
+
+.sjk-privacy-card .privacy-heading,
+.privacy-card .privacy-heading {
+    margin-bottom: 6px !important;
+}
+
+.sjk-privacy-card p,
+.privacy-card p {
+    margin: 0 !important;
+
+    color: var(--text-primary) !important;
+    font-size: 0.78rem !important;
+    font-weight: 600 !important;
+    line-height: 1.35 !important;
+}
+
+/* ---------- Narrow desktop only ---------- */
+
+@media (min-width: 900px) and (max-width: 1150px) {
+    .st-key-left_panel_content,
+    .st-key-left_panel_content[data-testid="stVerticalBlock"],
+    .st-key-left_panel_content
+    > [data-testid="stVerticalBlock"],
+    .sjk-left-panel-content {
+        gap: 8px !important;
+    }
+
+    .sjk-announcements-card,
+    .sjk-inventory-card,
+    .announcements-card,
+    .inventory-card {
+        padding: 11px !important;
+    }
+
+    .sjk-announcements-card h2,
+    .sjk-inventory-card h2,
+    .announcements-card h2,
+    .inventory-card h2 {
+        font-size: 1.05rem !important;
+    }
+
+    .sjk-inventory-status,
+    .inventory-status {
+        padding: 3px 5px !important;
+        font-size: 0.55rem !important;
+    }
+
+    .sjk-inventory-row,
+    .inventory-item-row {
+        align-items: flex-start !important;
+        flex-direction: column !important;
+        gap: 4px !important;
+    }
+
+    .sjk-inventory-count,
+    .inventory-item-count {
+        align-self: flex-start !important;
+    }
+
+    .sjk-privacy-card,
+    .privacy-card {
+        padding: 10px !important;
+    }
+
+    .sjk-privacy-card p,
+    .privacy-card p {
+        font-size: 0.7rem !important;
+    }
+}
+
+/* =========================================================
+   MOBILE INFO POPOVER INVENTORY
+   Keep this at the end of styles.css
+   ========================================================= */
+
+@media (max-width: 899px) {
+    div[data-testid="stPopoverBody"] {
+        max-height: min(
+            78dvh,
+            650px
+        ) !important;
+
+        overflow-x: hidden !important;
+        overflow-y: auto !important;
+    }
+
+    .st-key-mobile_inventory_list {
+        width: 100% !important;
+
+        padding: 10px !important;
+
+        background: #f6f8fa !important;
+
+        border:
+            1px
+            solid
+            #dfe6ec !important;
+
+        border-radius: 11px !important;
+
+        overflow-x: hidden !important;
+        overflow-y: auto !important;
+
+        scrollbar-width: thin;
+        scrollbar-color:
+            var(--scrollbar-color)
+            transparent;
+    }
+
+    .st-key-mobile_inventory_list
+    [data-testid="stMarkdownContainer"] p {
+        margin:
+            0
+            0
+            2px !important;
+
+        color: var(--text-primary) !important;
+
+        font-size: 0.87rem !important;
+        line-height: 1.3 !important;
+    }
+
+    .st-key-mobile_inventory_list
+    [data-testid="stCaptionContainer"] {
+        margin-bottom: 10px !important;
+
+        color: var(--text-muted) !important;
+
+        font-size: 0.72rem !important;
+    }
+
+    .st-key-mobile_inventory_list
+    [data-testid="stCaptionContainer"]:last-child {
+        margin-bottom: 0 !important;
+    }
+}
+
+/* =========================================================
+   ALTITUDE HEADER — FINAL FIXED VERSION
+   SJK wordmark on the left, transparent ALTITUDE logo in
+   the centre, and a small support line directly underneath.
+   Keep this section at the absolute end of styles.css.
+   ========================================================= */
+
+:root {
+    --header-height: 118px;
+}
+
+/* Streamlit wrapper containing the header */
+.block-container
+> [data-testid="stVerticalBlock"]
+> [data-testid="stElementContainer"]:has(
+    .sjk-header
+) {
+    flex: 0 0 var(--header-height) !important;
+
+    width: 100% !important;
+    height: var(--header-height) !important;
+    min-height: var(--header-height) !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    overflow: hidden !important;
+}
+
+.block-container
+> [data-testid="stVerticalBlock"]
+> [data-testid="stElementContainer"]:has(
+    .sjk-header
+)
+> [data-testid="stHtml"] {
+    width: 100% !important;
+    height: 100% !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* Full-width blue header */
+.sjk-header {
+    width: 100% !important;
+    height: var(--header-height) !important;
+    min-height: var(--header-height) !important;
+
+    margin: 0 !important;
+    padding: 0 24px !important;
+
+    display: grid !important;
+    grid-template-columns:
+        minmax(170px, 1fr)
+        minmax(0, auto)
+        minmax(170px, 1fr) !important;
+
+    align-items: center !important;
+
+    background:
+        linear-gradient(
+            90deg,
+            #0872ad 0%,
+            #0872ad 58%,
+            #076ba3 100%
+        ) !important;
+
+    border: none !important;
+    border-bottom: none !important;
+
+    box-shadow:
+        0 3px 12px
+        rgba(13, 45, 68, 0.18) !important;
+
+    overflow: hidden !important;
+}
+
+/* Equal left and right sections keep the centre truly centred */
+.sjk-header-left,
+.sjk-header-right {
+    min-width: 170px !important;
+}
+
+.sjk-header-left {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+}
+
+.sjk-header-right {
+    display: block !important;
+    width: 100% !important;
+}
+
+/* SJK logo */
+.sjk-wordmark {
+    display: block !important;
+
+    width: 172px !important;
+    max-width: 100% !important;
+    max-height: 84px !important;
+
+    object-fit: contain !important;
+    object-position: left center !important;
+}
+
+.sjk-wordmark-fallback {
+    color: #ffffff !important;
+
+    font-size: 2.5rem !important;
+    font-weight: 800 !important;
+}
+
+/* Centre content */
+.sjk-header-centre {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    width: auto !important;
+    height: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+
+    margin: 0 !important;
+    padding: 4px 0 6px !important;
+
+    text-align: center !important;
+    line-height: 1 !important;
+
+    overflow: hidden !important;
+}
+
+.altitude-center-wrap {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    flex: 0 0 auto !important;
+
+    width: min(250px, 35vw) !important;
+    height: 88px !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    overflow: visible !important;
+    line-height: 0 !important;
+}
+
+/* Transparent cropped logo — no clip-path or white rectangle */
+.altitude-center-logo {
+    display: block !important;
+
+    width: auto !important;
+    height: 88px !important;
+
+    max-width: min(250px, 35vw) !important;
+    max-height: 88px !important;
+
+    margin: 0 !important;
+
+    object-fit: contain !important;
+    object-position: center !important;
+
+    clip-path: none !important;
+    background: transparent !important;
+}
+
+/* Fallback when the image is missing */
+.altitude-text-fallback {
+    color: #ffffff !important;
+
+    font-family:
+        "Aptos Display",
+        "Segoe UI",
+        Arial,
+        sans-serif;
+
+    font-size: clamp(
+        2rem,
+        3.5vw,
+        3.6rem
+    ) !important;
+
+    font-weight: 850 !important;
+    line-height: 1 !important;
+
+    letter-spacing: 0.12em !important;
+    text-transform: uppercase !important;
+}
+
+/* Small support line fully contained inside the header */
+.altitude-tagline {
+    position: static !important;
+
+    display: block !important;
+    flex: 0 0 auto !important;
+
+    margin: 1px 0 0 !important;
+    padding: 0 !important;
+
+    color:
+        rgba(
+            255,
+            255,
+            255,
+            0.96
+        ) !important;
+
+    font-family:
+        "Aptos",
+        "Segoe UI",
+        Arial,
+        sans-serif !important;
+
+    font-size: clamp(
+        0.54rem,
+        0.68vw,
+        0.68rem
+    ) !important;
+
+    font-style: italic !important;
+    font-weight: 650 !important;
+    line-height: 1 !important;
+
+    letter-spacing: 0.02em !important;
+    white-space: nowrap !important;
+
+    transform: none !important;
+}
+
+/* Remove all decorative lines previously attached to the tagline */
+.altitude-tagline::before,
+.altitude-tagline::after {
+    content: none !important;
+    display: none !important;
+
+    width: 0 !important;
+    height: 0 !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    background: none !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+/* Hide obsolete header elements from earlier versions */
+.altitude-title,
+.altitude-subtitle,
+.altitude-ai-letter,
+.altitude-wordmark,
+.altitude-header-inner,
+.altitude-logo-area,
+.altitude-title-area,
+.altitude-header-balance,
+.altitude-product-name,
+.altitude-main-title,
+.altitude-title-divider,
+.sjk-main-title,
+.sjk-subtitle {
+    display: none !important;
+}
+
+/* =========================================================
+   Medium desktop and tablet
+   ========================================================= */
+
+@media (max-width: 1150px) and (min-width: 900px) {
+    :root {
+        --header-height: 104px;
+    }
+
+    .sjk-header {
+        grid-template-columns:
+            minmax(140px, 1fr)
+            minmax(0, auto)
+            minmax(140px, 1fr) !important;
+
+        padding: 0 18px !important;
+    }
+
+    .sjk-header-left,
+    .sjk-header-right {
+        min-width: 140px !important;
+    }
+
+    .sjk-wordmark {
+        width: 145px !important;
+        max-height: 72px !important;
+    }
+
+    .altitude-center-wrap {
+        width: min(215px, 34vw) !important;
+        height: 76px !important;
+    }
+
+    .altitude-center-logo {
+        height: 76px !important;
+        max-width: min(215px, 34vw) !important;
+        max-height: 76px !important;
+    }
+
+    .altitude-tagline {
+        font-size: 0.56rem !important;
+    }
+}
+
+/* =========================================================
+   Mobile
+   ========================================================= */
+
+@media (max-width: 899px) {
+    :root {
+        --header-height: 78px;
+        --page-gap: 5px;
+    }
+
+    .sjk-header {
+        grid-template-columns:
+            62px
+            minmax(0, 1fr)
+            62px !important;
+
+        height: var(--header-height) !important;
+        min-height: var(--header-height) !important;
+
+        padding: 0 7px !important;
+        gap: 4px !important;
+    }
+
+    .sjk-header-left,
+    .sjk-header-right {
+        min-width: 62px !important;
+        width: 62px !important;
+    }
+
+    .sjk-wordmark {
+        width: 58px !important;
+        max-height: 50px !important;
+
+        object-position: center !important;
+    }
+
+    .sjk-header-centre {
+        padding: 2px 0 3px !important;
+    }
+
+    .altitude-center-wrap {
+        width: min(145px, 50vw) !important;
+        height: 52px !important;
+    }
+
+    .altitude-center-logo {
+        height: 52px !important;
+        max-width: min(145px, 50vw) !important;
+        max-height: 52px !important;
+    }
+
+    .altitude-tagline {
+        margin-top: 1px !important;
+
+        font-size: clamp(
+            0.34rem,
+            1.55vw,
+            0.43rem
+        ) !important;
+
+        letter-spacing: 0.005em !important;
+    }
+
+    .st-key-app_body {
+        height:
+            calc(
+                100dvh
+                - var(--header-height)
+            ) !important;
+    }
+}
+
+/* =========================================================
+   Very small phones
+   ========================================================= */
+
+@media (max-width: 430px) {
+    :root {
+        --header-height: 74px;
+    }
+
+    .sjk-header {
+        grid-template-columns:
+            54px
+            minmax(0, 1fr)
+            54px !important;
+
+        padding: 0 5px !important;
+        gap: 3px !important;
+    }
+
+    .sjk-header-left,
+    .sjk-header-right {
+        min-width: 54px !important;
+        width: 54px !important;
+    }
+
+    .sjk-wordmark {
+        width: 50px !important;
+        max-height: 45px !important;
+    }
+
+    .altitude-center-wrap {
+        width: min(130px, 48vw) !important;
+        height: 48px !important;
+    }
+
+    .altitude-center-logo {
+        height: 48px !important;
+        max-width: min(130px, 48vw) !important;
+        max-height: 48px !important;
+    }
+
+    .altitude-tagline {
+        font-size: 0.32rem !important;
+    }
+}
+
+/* Reduced-motion accessibility */
+@media (prefers-reduced-motion: reduce) {
+    .sjk-header,
+    .altitude-center-logo,
+    .altitude-tagline {
+        animation: none !important;
+        transition: none !important;
+    }
+}
+

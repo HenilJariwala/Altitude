@@ -1,0 +1,11 @@
+streamlit>=1.48,<2
+chromadb>=1.0,<2
+ollama>=0.5,<1
+python-dotenv>=1.0,<2
+requests>=2.31,<3
+pydantic>=2.7,<3
+langchain-chroma>=0.2,<2
+langchain-ollama>=0.3,<2
+python-frontmatter>=1.1,<2
+rapidfuzz>=3.9,<4
+numpy>=1.26.4,<3
