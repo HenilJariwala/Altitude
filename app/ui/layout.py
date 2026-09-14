@@ -7,6 +7,7 @@ from pathlib import Path
 
 import streamlit as st
 
+from core.analytics_db import get_active_announcements, initialize_database
 from core.inventory_router import fetch_inventory
 
 APP_DIRECTORY = Path(__file__).resolve().parents[1]
@@ -78,8 +79,13 @@ def image_data_uri(filename: str) -> str:
     return f"data:{mime_type};base64,{encoded_image}"
 
 
-def render_header() -> None:
-    """Render the shared ALTITUDE header."""
+def render_header(*, admin_mode: bool = False) -> None:
+    """Render the shared ALTITUDE header.
+
+    The public chat intentionally has no link to the administrator portal.
+    Administrators access /admin directly. The admin page keeps a plain-text
+    link back to the support chat.
+    """
 
     sjk_logo_uri = image_data_uri("sjk_wordmark.png")
     altitude_logo_uri = image_data_uri("altitude_center_logo.png")
@@ -102,8 +108,23 @@ def render_header() -> None:
             '<div class="altitude-text-fallback">ALTITUDE</div>'
         )
 
+    route_link_html = ""
+
+    if admin_mode:
+        route_link_html = (
+            '<a class="sjk-header-route-link" href="./">'
+            '<span>Support Chat</span>'
+            '</a>'
+        )
+
+    header_class = (
+        "sjk-header sjk-header-admin"
+        if admin_mode
+        else "sjk-header"
+    )
+
     header_html = f"""
-    <header class="sjk-header">
+    <header class="{header_class}">
         <div class="sjk-header-left">
             {sjk_logo_html}
         </div>
@@ -118,11 +139,104 @@ def render_header() -> None:
             </div>
         </div>
 
-        <div class="sjk-header-right"></div>
+        <div class="sjk-header-right">
+            {route_link_html}
+        </div>
     </header>
     """
 
     st.html(header_html)
+
+
+ANNOUNCEMENT_TYPE_LABELS: dict[str, str] = {
+    "info": "Information",
+    "maintenance": "Maintenance",
+    "warning": "Warning",
+    "outage": "Service outage",
+    "resolved": "Resolved",
+}
+
+
+def _active_announcement_rows() -> list[dict[str, object]]:
+    """Load announcements currently visible to support-chat users."""
+    initialize_database()
+    return get_active_announcements(limit=30)
+
+
+def _announcement_rows_html(
+    announcements: list[dict[str, object]],
+) -> str:
+    """Return safe HTML for the scrollable left-panel announcement list."""
+    if not announcements:
+        return """
+<div class="sjk-announcement-empty">
+    There are no active announcements right now.
+</div>
+"""
+
+    items: list[str] = []
+
+    for announcement in announcements:
+        severity = str(announcement.get("severity", "info")).lower()
+        if severity not in ANNOUNCEMENT_TYPE_LABELS:
+            severity = "info"
+
+        title = escape(str(announcement.get("title", "Announcement")))
+        message = escape(str(announcement.get("message", "")))
+        type_label = escape(ANNOUNCEMENT_TYPE_LABELS[severity])
+
+        items.append(
+            f"""
+<article class="sjk-announcement-item sjk-announcement-{severity}">
+    <div class="sjk-announcement-item-heading">
+        <strong>{title}</strong>
+        <span>{type_label}</span>
+    </div>
+    <p>{message}</p>
+</article>
+"""
+        )
+
+    return "".join(items)
+
+
+@st.fragment(run_every="15s")
+def render_announcements_card() -> None:
+    """Render live database-backed announcements and refresh every 15 seconds."""
+    try:
+        announcements = _active_announcement_rows()
+        rows_html = _announcement_rows_html(announcements)
+        count_label = (
+            f"{len(announcements)} active"
+            if announcements
+            else "No active notices"
+        )
+    except Exception as error:
+        print(
+            "Left-panel announcements error: "
+            f"{type(error).__name__}: {error}"
+        )
+        rows_html = """
+<div class="sjk-announcement-empty">
+    Announcements are temporarily unavailable.
+</div>
+"""
+        count_label = "Unavailable"
+
+    st.html(
+        f"""
+<section class="sjk-card sjk-announcements-card">
+    <div class="sjk-announcements-header">
+        <h2>Announcements</h2>
+        <span>{escape(count_label)}</span>
+    </div>
+    <div class="sjk-announcements-scroll">
+        {rows_html}
+    </div>
+</section>
+"""
+    )
+
 
 @st.fragment(
     run_every="30s",
@@ -286,20 +400,7 @@ def render_left_panel() -> None:
         border=False,
         gap=None,
     ):
-        st.html(
-            """
-<section class="sjk-card sjk-announcements-card">
-    <h2>Announcements</h2>
-
-    <div class="sjk-announcements-scroll">
-        <p>
-            Please return loaned items when you are
-            finished using them.
-        </p>
-    </div>
-</section>
-"""
-        )
+        render_announcements_card()
 
         render_live_inventory_card()
 
@@ -335,13 +436,28 @@ def render_mobile_info_popover() -> None:
             width="content",
         ):
             # Announcements
-            st.markdown(
-                "### Announcements"
-            )
+            st.markdown("### Announcements")
 
-            st.write(
-                "Please return loaned items when you are finished."
-            )
+            try:
+                mobile_announcements = _active_announcement_rows()
+
+                if mobile_announcements:
+                    with st.container(
+                        key="mobile_announcements_list",
+                        height=220,
+                        border=True,
+                    ):
+                        st.html(
+                            _announcement_rows_html(mobile_announcements)
+                        )
+                else:
+                    st.caption("There are no active announcements right now.")
+            except Exception as error:
+                print(
+                    "Mobile announcements error: "
+                    f"{type(error).__name__}: {error}"
+                )
+                st.warning("Announcements are temporarily unavailable.")
 
             st.divider()
 

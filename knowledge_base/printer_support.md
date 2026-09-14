@@ -1,10 +1,9 @@
 ---
-
 title: Printer Support
 topic: printer
 audience: public
 document_type: support_procedure
-version: 3.1
+version: 3.2
 ---
 
 # Printer Support

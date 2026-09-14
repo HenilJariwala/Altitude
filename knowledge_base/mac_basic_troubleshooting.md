@@ -967,5 +967,3 @@ Do not provide:
 * Security-bypass instructions
 * Instructions for creating another administrator account
 * Instructions for disabling macOS security controls
-
-

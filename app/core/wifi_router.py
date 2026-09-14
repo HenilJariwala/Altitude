@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from core.text_matching import normalize_text
+from core.topic_context import build_topic_context
 
 
 @dataclass(frozen=True)
@@ -111,6 +112,8 @@ def detect_connection_problem(
         "keeps dropping",
         "weak signal",
         "offline",
+        "not wokring",
+        "not workng",
     )
 
     return any(
@@ -237,6 +240,35 @@ def route_wifi_question(
 ) -> WifiDecision:
     """Handle Student and Guest Wi-Fi without the LLM."""
 
+    topic_context = build_topic_context(question, history)
+    if not topic_context.allows("wifi"):
+        return WifiDecision(handled=False)
+
+    normalized = normalize_text(question)
+
+    widespread_signals = (
+        "nobody in my classroom",
+        "everyone in my classroom",
+        "entire classroom",
+        "everyone is disconnected",
+        "multiple people",
+        "all students",
+        "whole classroom",
+    )
+
+    if contains_wifi_topic(question) and any(
+        signal in normalized for signal in widespread_signals
+    ):
+        return WifiDecision(
+            handled=True,
+            answer=(
+                "This appears to affect multiple people in the classroom, so it may "
+                "be a wider Wi-Fi outage rather than one device. Please report it to "
+                "the IT Helpdesk or IT team immediately with the classroom location, "
+                "affected network, and approximate start time."
+            ),
+        )
+
     if unresolved_wifi_follow_up(
         question,
         history,
@@ -282,15 +314,16 @@ def route_wifi_question(
         )
 
     if role is None:
-        prompt = (
-            "Are you connecting to "
-            "**Student Wi-Fi** or **Guest Wi-Fi**?"
-            if mode == "troubleshoot"
-            else (
-                "Are you connecting as a "
-                "**student** or as a **guest**?"
+        if mode == "troubleshoot":
+            prompt = (
+                "For this Wi-Fi issue, are you connected to **Student Wi-Fi** "
+                "or **Guest Wi-Fi**?"
             )
-        )
+        else:
+            prompt = (
+                "Which approved Wi-Fi network do you need: **Student Wi-Fi** "
+                "or **Guest Wi-Fi**?"
+            )
 
         return WifiDecision(
             handled=True,

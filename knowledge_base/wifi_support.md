@@ -4,7 +4,7 @@ topic: wifi
 audience: public
 document_type: support_procedure
 workflow: wifi_access
-version: 1.0
+version: 1.1
 ---
 
 # Wi-Fi Support
@@ -76,7 +76,7 @@ Do not display the Student Wi-Fi QR code at the same time.
 
 If the user does not know whether they need Student or Guest Wi-Fi, respond with:
 
-> Please contact the IT Helpdesk so we can confirm the correct Wi-Fi access for your device.
+> Please contact the IT Helpdesk so IT can confirm the correct Wi-Fi access for your device.
 
 Do not guess the appropriate network.
 
@@ -84,7 +84,7 @@ Do not guess the appropriate network.
 
 If the user asks for the actual Wi-Fi password, respond with:
 
-> For security reasons, I cannot provide the Wi-Fi password directly. Are you connecting as a student or as a guest?
+> For security reasons, the Wi-Fi password cannot be provided directly. Are you connecting as a student or as a guest?
 
 If the user continues asking for the password after the correct access type is known, respond with:
 

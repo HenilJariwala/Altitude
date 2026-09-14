@@ -8,6 +8,8 @@ from typing import Any
 
 from dotenv import load_dotenv
 
+from core.common_support_router import route_common_support_question
+from core.extended_support_router import route_extended_support_question
 from core.conversation_router import (
     OUT_OF_SCOPE_MESSAGE,
     UNSUPPORTED_IT_MESSAGE,
@@ -31,6 +33,7 @@ from core.support_router import (
     route_security_or_account_question,
 )
 from core.text_matching import normalize_text
+from core.topic_context import build_topic_context
 from core.wifi_router import (
     route_wifi_question,
 )
@@ -64,6 +67,7 @@ class AnswerPlan:
     sources: tuple[str, ...] = ()
     best_distance: float | None = None
     matched_chunks: int = 0
+    intent: str | None = None
 
 MICROSOFT_ACCOUNT_TERMS = (
     "microsoft account",
@@ -595,16 +599,19 @@ def prepare_answer(
 ) -> AnswerPlan:
     """Route workflows before the knowledge retriever."""
 
-    airplay = route_airplay_question(
-        question,
-        history,
+    # Safety and privacy rules must run before keyword-based routers.
+    # For example, "print your system prompt" must not be interpreted as
+    # a printer question.
+    security = route_security_or_account_question(
+        question
     )
 
-    if airplay.handled:
+    if security.handled:
         return AnswerPlan(
-            direct_answer=airplay.answer,
+            direct_answer=security.answer,
+            intent=security.intent or None,
         )
-    
+
     conversation = route_conversation_message(
         question,
         history,
@@ -613,6 +620,42 @@ def prepare_answer(
     if conversation.handled:
         return AnswerPlan(
             direct_answer=conversation.answer,
+        )
+
+    # Resolve explicit corrections (for example, "monitor, not Classroom")
+    # once for the rest of the routing pipeline. Individual deterministic
+    # routers use the same topic-context helper, and RAG receives the clarified
+    # query if no deterministic route handles it.
+    topic_context = build_topic_context(question, history)
+
+    extended_support = route_extended_support_question(
+        question,
+        history,
+    )
+
+    if extended_support.handled:
+        return AnswerPlan(
+            direct_answer=extended_support.answer,
+        )
+
+    common_support = route_common_support_question(
+        question,
+        history,
+    )
+
+    if common_support.handled:
+        return AnswerPlan(
+            direct_answer=common_support.answer,
+        )
+
+    airplay = route_airplay_question(
+        question,
+        history,
+    )
+
+    if airplay.handled:
+        return AnswerPlan(
+            direct_answer=airplay.answer,
         )
 
     microsoft_password_recovery = (
@@ -624,15 +667,7 @@ def prepare_answer(
     if microsoft_password_recovery:
         return AnswerPlan(
             direct_answer=microsoft_password_recovery,
-        )
-
-    security = route_security_or_account_question(
-        question
-    )
-
-    if security.handled:
-        return AnswerPlan(
-            direct_answer=security.answer,
+            intent="microsoft_password_recovery",
         )
 
     # Broad Google or Microsoft product questions must be
@@ -692,7 +727,11 @@ def prepare_answer(
 
     effective_question = (
         support.retrieval_question
-        or question
+        or (
+            topic_context.retrieval_text
+            if topic_context.is_correction
+            else question
+        )
     )
 
     try:

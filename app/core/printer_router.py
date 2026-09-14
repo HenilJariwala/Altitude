@@ -5,6 +5,7 @@ from typing import Any
 
 from core.platform_context import detect_platform
 from core.text_matching import normalize_text
+from core.topic_context import build_topic_context
 
 
 LEARNING_COMMONS_IP = "192.168.1.205"
@@ -79,7 +80,7 @@ def get_expected_printer_step(
 def is_printer_supply_request(
     question: str,
 ) -> bool:
-    normalized = normalize_text(question)
+    normalized = normalize_text(question).strip(" .")
 
     return any(
         phrase in normalized
@@ -483,7 +484,128 @@ def route_printer_question(
     question: str,
     history: list[dict[str, Any]],
 ) -> PrinterDecision:
+    topic_context = build_topic_context(question, history)
+    if not topic_context.allows("printer"):
+        return PrinterDecision(handled=False)
+
     normalized = normalize_text(question)
+
+    if any(
+        phrase in normalized
+        for phrase in (
+            "all printers in the building",
+            "all printers are unavailable",
+            "all printers unavailable",
+            "every printer is unavailable",
+            "multiple printers are unavailable",
+        )
+    ):
+        return PrinterDecision(
+            handled=True,
+            answer=(
+                "Because multiple or all printers are unavailable, this may be a "
+                "printer-service outage rather than a problem with one device. Please "
+                "contact the IT Helpdesk or IT team and report the building area, "
+                "affected printers, and approximate start time."
+            ),
+        )
+
+    if any(
+        phrase in normalized
+        for phrase in (
+            "stuck in the print queue",
+            "stuck in print queue",
+            "print job is stuck",
+            "document is stuck in the queue",
+        )
+    ):
+        return PrinterDecision(
+            handled=True,
+            answer=(
+                "Try clearing the stuck print job:\n\n"
+                "1. Open the printer's **print queue** on your device.\n"
+                "2. Select only your stuck or failed print job.\n"
+                "3. Choose **Cancel**, **Delete**, or **Remove**.\n"
+                "4. Confirm that the queue is not paused; choose **Resume** if needed.\n"
+                "5. Close and reopen the document, then send a one-page test print.\n"
+                "6. Restart the device if the job cannot be removed.\n\n"
+                "If the queue remains stuck, contact the IT Helpdesk with the printer name."
+            ),
+        )
+
+    if "printer works for everyone except me" in normalized or (
+        "printer" in normalized
+        and "everyone" in normalized
+        and any(term in normalized for term in ("except me", "but me", "only me"))
+    ):
+        return PrinterDecision(
+            handled=True,
+            answer=(
+                "Since the printer works for everyone else, focus on your device:\n\n"
+                "1. Confirm that your device is on the approved school Wi-Fi.\n"
+                "2. Confirm that the correct printer is selected.\n"
+                "3. Open the print queue and remove only your failed jobs.\n"
+                "4. Confirm that the queue is not paused.\n"
+                "5. Restart the application and try a one-page test print.\n"
+                "6. If the printer is missing, the driver or printer may need to be re-added by IT.\n\n"
+                "Contact the IT Helpdesk if the problem continues."
+            ),
+        )
+
+    recent_printer_context = any(
+        any(term in normalize_text(str(message.get("content", ""))) for term in (
+            "printer", "printing", "print queue"
+        ))
+        for message in history[-10:]
+    )
+
+    if recent_printer_context and normalized in {
+        "i already restarted it",
+        "already restarted it",
+        "i restarted it already",
+    }:
+        return PrinterDecision(
+            handled=True,
+            answer=(
+                "Since it was already restarted, try the next printer checks:\n\n"
+                "1. Confirm that the correct printer is selected.\n"
+                "2. Open the print queue and remove only your failed job.\n"
+                "3. Confirm that the queue is not paused.\n"
+                "4. Verify the device is on the approved school Wi-Fi.\n"
+                "5. Send a one-page test print.\n\n"
+                "If it still fails, contact the IT Helpdesk or create a ticket."
+            ),
+        )
+
+    if recent_printer_context and normalized in {
+        "it still does not work",
+        "it still doesn't work",
+        "still does not work",
+        "still not working",
+    }:
+        return PrinterDecision(
+            handled=True,
+            answer=(
+                "The printer issue is still unresolved after the approved checks. "
+                "The next step is to contact the IT Helpdesk or create a ticket with "
+                "the printer name, device type, and any error message."
+            ),
+        )
+
+    if any(phrase in normalized for phrase in ("paper jam", "printer jam", "jammed")):
+        return PrinterDecision(
+            handled=True,
+            answer=(
+                "Try these safe paper-jam checks:\n\n"
+                "1. Stop the print job and read the printer display for the jam location.\n"
+                "2. Open only the tray or access panel identified by the printer.\n"
+                "3. Gently remove visible paper in the normal paper path; do not force it.\n"
+                "4. Check for small torn pieces and reload the paper tray correctly.\n"
+                "5. Close all panels and try one test page.\n\n"
+                "If paper is not visible, cannot be removed easily, or the warning remains, "
+                "stop and contact the IT Helpdesk."
+            ),
+        )
 
     expected_step = get_expected_printer_step(
         history
@@ -644,10 +766,15 @@ def route_printer_question(
             )
 
     if printer is None:
+        prompt_intro = (
+            "Which printer is showing **Offline**?"
+            if "offline" in normalized
+            else "Which printer are you trying to use?"
+        )
         return PrinterDecision(
             handled=True,
             answer=(
-                "Which printer are you trying to use?\n\n"
+                f"{prompt_intro}\n\n"
                 "- **Learning Commons / Library printer**\n"
                 "- **Another school printer**"
             ),

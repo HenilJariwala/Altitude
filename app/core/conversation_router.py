@@ -10,9 +10,9 @@ from core.text_matching import (
 
 
 OUT_OF_SCOPE_MESSAGE = (
-    "I can only help with IT-related questions. "
-    "For this request, please contact your respective "
-    "supervisor or the appropriate department."
+    "I’m focused on SJK IT support, so I can’t complete that non-IT "
+    "request. I can help with Wi-Fi, printers, school accounts, devices, "
+    "classroom displays, software, loaner inventory, and helpdesk tickets."
 )
 
 
@@ -21,6 +21,25 @@ UNSUPPORTED_IT_MESSAGE = (
     "approved procedure for that request. Please contact the "
     "IT Helpdesk for further assistance."
 )
+
+
+CAPABILITIES_MESSAGE = (
+    "I can help troubleshoot common SJK technology issues, including:\n\n"
+    "- Wi-Fi and internet connection problems\n"
+    "- Printers and print queues\n"
+    "- School passwords, accounts, Gmail, Drive, and Classroom\n"
+    "- MacBooks, Chromebooks, classroom displays, and AirPlay\n"
+    "- Approved software and device troubleshooting\n"
+    "- Live loaner inventory checks\n"
+    "- Escalating unresolved problems to an IT helpdesk ticket"
+)
+
+IDENTITY_MESSAGE = (
+    "I’m **Altitude**, the SJK IT Helpdesk AI assistant. I provide approved "
+    "technology support, check loaner inventory, and help users escalate "
+    "unresolved IT issues to the helpdesk team."
+)
+
 
 
 @dataclass(frozen=True)
@@ -298,11 +317,11 @@ def route_conversation_message(
     question: str,
     history: list[dict[str, Any]],
 ) -> ConversationDecision:
-    """Handle greetings, acknowledgements, and non-IT requests."""
+    """Handle greetings, identity, scope, and requests needing clarification."""
 
     del history
 
-    normalized = normalize_text(question)
+    normalized = normalize_text(question).strip(" .")
 
     if not normalized:
         return ConversationDecision(
@@ -319,33 +338,166 @@ def route_conversation_message(
     if normalized in GREETING_REPLIES:
         return ConversationDecision(
             handled=True,
-            answer=(
-                "Hello! How can I help you with an IT issue today?"
-            ),
+            answer="Hello! What IT or technology issue can I help you with today?",
         )
 
     if normalized in {
-        "bye",
-        "goodbye",
-        "see you",
+        "what can you help me with",
+        "what can you do",
+        "how can you help",
+        "how can you help me",
+        "what do you support",
+        "what services do you support",
+    }:
+        return ConversationDecision(handled=True, answer=CAPABILITIES_MESSAGE)
+
+    if normalized in {
+        "who are you",
+        "what are you",
+        "what is altitude",
+        "tell me about yourself",
+    }:
+        return ConversationDecision(handled=True, answer=IDENTITY_MESSAGE)
+
+    if normalized in {
+        "can you help me with a school technology problem",
+        "can you help with a school technology problem",
+        "i need help with a technology problem",
+        "i have a technology problem",
     }:
         return ConversationDecision(
             handled=True,
             answer=(
-                "Goodbye! Please contact the IT Helpdesk if "
-                "you need further assistance."
+                "Yes. What technology issue are you experiencing? Please tell me "
+                "the device or service involved and what is happening."
+            ),
+        )
+
+    # Short requests without an identifiable subject should be clarified
+    # instead of sent to semantic retrieval, where they can match a random topic.
+    clarification_answers = {
+        "it does not work": (
+            "What device or service is not working, and what exactly happens when "
+            "you try to use it?"
+        ),
+        "it doesn't work": (
+            "What device or service is not working, and what exactly happens when "
+            "you try to use it?"
+        ),
+        "help": (
+            "What IT issue do you need help with? Please tell me the device or "
+            "service and the problem you are seeing."
+        ),
+        "the screen": (
+            "What screen or display are you using, and what problem are you seeing "
+            "on it?"
+        ),
+        "i cannot connect": (
+            "What are you trying to connect to: Wi-Fi, AirPlay, a printer, an "
+            "account, or another service?"
+        ),
+        "i can't connect": (
+            "What are you trying to connect to: Wi-Fi, AirPlay, a printer, an "
+            "account, or another service?"
+        ),
+        "printer": (
+            "What printer problem are you experiencing: adding the printer, an "
+            "offline message, a stuck print queue, or something else?"
+        ),
+        "macbook": (
+            "Do you need MacBook troubleshooting, or are you asking whether a "
+            "MacBook is available to borrow?"
+        ),
+    }
+
+    if normalized in clarification_answers:
+        return ConversationDecision(
+            handled=True,
+            answer=clarification_answers[normalized],
+        )
+
+    # Contradictory statements need clarification, not a guessed procedure.
+    if "chromebook" in normalized and "macos" in normalized:
+        return ConversationDecision(
+            handled=True,
+            answer=(
+                "Please clarify which device you are using. A Chromebook runs "
+                "ChromeOS, while macOS runs on a Mac. Which one is affected?"
+            ),
+        )
+
+    if "printer" in normalized and "offline" in normalized and any(
+        phrase in normalized
+        for phrase in ("can print", "print successfully", "printing successfully")
+    ):
+        return ConversationDecision(
+            handled=True,
+            answer=(
+                "Please clarify: is the printer showing **Offline** even though "
+                "printing is currently successful, or does a specific job still fail?"
+            ),
+        )
+
+    if "wifi" in normalized and "only for me" in normalized and "everyone" in normalized:
+        return ConversationDecision(
+            handled=True,
+            answer=(
+                "Please clarify whether only your device is affected or everyone is "
+                "disconnected. If multiple people are affected, this may be a Wi-Fi "
+                "outage that should be reported to the IT team."
+            ),
+        )
+
+    if "restarted it" in normalized and "did not restart" in normalized:
+        return ConversationDecision(
+            handled=True,
+            answer=(
+                "Please clarify what you restarted and whether the restart actually "
+                "completed before we continue troubleshooting."
+            ),
+        )
+
+    if normalized in {"bye", "goodbye", "see you"}:
+        return ConversationDecision(
+            handled=True,
+            answer=(
+                "Goodbye! Please contact the IT Helpdesk if you need further "
+                "assistance."
+            ),
+        )
+
+    if "weather" in normalized:
+        return ConversationDecision(
+            handled=True,
+            answer=(
+                "I’m focused on SJK IT support, so I can’t provide today’s weather. "
+                "I can help with Wi-Fi, printers, accounts, devices, and other "
+                "technology issues."
             ),
         )
 
     if any(
         phrase in normalized
-        for phrase in OUT_OF_SCOPE_PHRASES
+        for phrase in (
+            "tell me a joke",
+            "do my math homework",
+            "do my homework",
+            "write my english essay",
+            "write my essay",
+        )
     ):
+        return ConversationDecision(handled=True, answer=OUT_OF_SCOPE_MESSAGE)
+
+    if normalized in {"you are useless", "this is useless"}:
         return ConversationDecision(
             handled=True,
-            answer=OUT_OF_SCOPE_MESSAGE,
+            answer=(
+                "I’m sorry the response was not useful. Tell me the IT problem and "
+                "what you already tried, and I’ll focus on the next practical step."
+            ),
         )
 
-    return ConversationDecision(
-        handled=False,
-    )
+    if any(phrase in normalized for phrase in OUT_OF_SCOPE_PHRASES):
+        return ConversationDecision(handled=True, answer=OUT_OF_SCOPE_MESSAGE)
+
+    return ConversationDecision(handled=False)

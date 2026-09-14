@@ -5,7 +5,7 @@ platform: web
 audience: public
 document_type: support_procedure
 workflow: google_workspace_basic_support
-version: 1.0
+version: 1.1
 ---
 
 # Google Workspace for Education Basic Support
@@ -55,26 +55,20 @@ Visit the IT Helpdesk in person if the password is not accepted, the account is 
 
 ## Topic: Forgot or Need to Reset School Google Password
 
-**Intent Keywords:** forgot google password, reset school password, gmail password reset, change school password, cannot remember password, google classroom password, school account password
+**Intent Keywords:** forgot google password, reset school password, gmail password reset, change school password, cannot remember password, google classroom password, school account password, forgot email password
 
 **Direct Answer:**
 
 School Google Workspace passwords must be reset in person by the IT Helpdesk after identity verification.
 
-**Approved Steps:**
+**Required Steps:**
 
-1. Stop attempting to sign in repeatedly.
-2. Bring the school-issued device or school identification when possible.
-3. Visit the IT Helpdesk during support hours.
-4. Tell the technician the school email address connected to the account.
-5. After the password is reset, sign in again on the school device.
+1. Stop repeated sign-in attempts.
+2. Bring your school-issued device or school ID if available.
+3. Visit the IT Helpdesk and provide the technician with your school email address.
+4. After IT resets the password, sign in again using the new password.
 
-**Escalation:**
-
-All school Google password resets must be completed in person at the IT Helpdesk.
-
-**Bot Instruction:** Never direct the user to Google self-service password recovery. Never ask for an old password, new password, verification code, or recovery code.
-
+**Bot Instruction:** Keep this answer concise. Do not offer Google self-service password recovery. Do not ask for an old password, new password, verification code, or recovery code. Do not add a second escalation paragraph because the required action is already stated.
 
 ## Topic: School Google Account Is Locked or Disabled
 
@@ -125,26 +119,27 @@ Contact the IT Helpdesk if the school account is missing, disabled, or repeatedl
 
 ## Topic: Two-Step Verification or Verification Code Problem
 
-**Intent Keywords:** google verification code, two step verification, 2fa, 2sv, authenticator not working, lost phone, backup code, security code
+**Intent Keywords:** two-step verification, two factor authentication, 2fa, mfa, authenticator app, google authenticator, approval notification, approval prompt, push notification, verification code, verification prompt, phone approval not arriving, lost phone, changed phone
 
 **Direct Answer:**
 
-Do not share verification or recovery codes. If the approved sign-in method is unavailable, contact the IT Helpdesk.
+If an approval notification or verification code is not arriving, first confirm that the phone and school account are using the expected verification method.
 
 **Troubleshooting Steps:**
 
-1. Confirm that the device date, time, and time zone are correct.
-2. Use the newest code shown by the approved authenticator.
-3. Confirm that the code is for the school Google account.
-4. Try another approved verification method if Google offers one.
-5. Do not repeatedly enter incorrect codes.
+1. Confirm that the phone has internet access and that Airplane Mode is off.
+2. Open the authenticator app directly instead of waiting only for a notification.
+3. Confirm that the approval request belongs to the correct school Google account.
+4. Check that the phone's date, time, and time zone are set automatically and are correct.
+5. Use the newest approval request or verification code; older requests may expire.
+6. If Google offers another approved verification method, use it.
+7. Stop repeated attempts if approvals or codes continue to fail.
 
 **Escalation:**
 
-Contact the IT Helpdesk if the phone was replaced, the authenticator is unavailable, or all approved methods fail.
+Contact the IT Helpdesk if the phone was replaced, the authenticator method is unavailable, no approved verification method works, or the school account cannot complete two-step verification.
 
-**Bot Instruction:** Never ask the user to paste a verification, authenticator, backup, or recovery code into chat.
-
+**Bot Instruction:** Never ask the user to paste a verification code, backup code, recovery code, authenticator code, or approval number into chat. Do not answer this topic with file-upload, Gmail attachment, or unrelated account instructions.
 
 ## Topic: Google Workspace Service May Be Down
 

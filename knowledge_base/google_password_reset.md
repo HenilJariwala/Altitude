@@ -1,61 +1,44 @@
 ---
-
 title: Google Account Password Reset
 topic: google_password_reset
 audience: public
 document_type: support_procedure
-version: 1.0
+version: 1.2
 ---
 
 # Google Account Password Reset
 
-This document contains the approved SJK procedure for Google account password-reset requests.
+This document contains the approved SJK procedure for school Google Workspace password-reset requests.
 
-## Common Password Reset Questions
+## Topic: School Google Workspace Password Reset
 
-Use this procedure when a user asks:
+**Intent Keywords:** forgot email password, forgot school password, reset Google password, school email password, Google account password, cannot sign in
 
-* I forgot my Google password.
-* How do I reset my Google password?
-* My Google account password is not working.
-* I cannot sign in to my school Google account.
-* Can you change my Google password?
-* I am locked out of my Google account.
-* I need a new password for my school email.
+**Target Audience:** Students, Faculty, Staff
 
-## Approved Password Reset Response
+**Bot Instruction:** Keep this response concise. A school Google Workspace password reset must be completed in person by the IT Helpdesk after identity verification. Do not offer an IT ticket from negative feedback on this answer. Do not repeat the same Helpdesk requirement at the end.
 
-When a user requests a Google account password reset, respond with:
+**Direct Answer:**
+School Google Workspace passwords must be reset in person by the IT Helpdesk after identity verification.
 
-> Please visit the IT Helpdesk so the IT team can verify your request and reset your Google account password.
+**Required Steps:**
+1. Stop repeated sign-in attempts.
+2. Bring your school-issued device or school ID if available.
+3. Visit the IT Helpdesk and provide the technician with your school email address.
+4. After IT resets the password, sign in again using the new password.
 
-The chatbot cannot reset, display, recover, or change a user's password.
-
-## User Cannot Sign In
-
-If the user cannot sign in because they believe their password is incorrect, respond with:
-
-> Please visit the IT Helpdesk so the IT team can verify your account and assist with changing your Google password.
-
-Do not guess whether the account is disabled, locked, suspended, or using an incorrect password.
+Do not share your password or verification codes in chat.
 
 ## Security Rules
 
 The assistant must not:
 
 * Ask the user to provide their current password.
-* Ask the user to provide a new password in the chat.
+* Ask the user to provide a new password in chat.
 * Display or recover an existing password.
 * Generate a temporary password.
-* Request password-reset codes or verification codes.
-* Request multi-factor authentication codes.
+* Request password-reset or multi-factor verification codes.
 * Claim that the password has been reset.
 * Claim that the account is locked or disabled without verified information.
 * Provide administrator credentials.
 * Include passwords or verification codes in chat logs or support tickets.
-
-## Escalation
-
-If the user needs immediate access to their school Google account, respond with:
-
-> Please visit the IT Helpdesk for password-reset assistance. The IT team will verify the request before changing the account password.

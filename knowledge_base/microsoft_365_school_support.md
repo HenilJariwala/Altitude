@@ -5,7 +5,7 @@ platform: cross-platform
 audience: public
 document_type: support_procedure
 workflow: microsoft_365_basic_support
-version: 1.0
+version: 1.1
 ---
 
 # Microsoft Office and Microsoft Account Basic Support
@@ -144,52 +144,27 @@ Contact SJK IT only when the application or school device continues using the wr
 
 ## Topic: Microsoft Verification Code or Multi-Factor Authentication Problem
 
-**Intent Keywords:** microsoft verification code, microsoft mfa not working, authenticator not working, two step verification, lost phone microsoft account
+**Intent Keywords:** microsoft verification code, microsoft mfa, microsoft authenticator, authenticator approval, approval notification, push notification, two factor authentication, two step verification, 2fa, mfa not working, lost phone microsoft account, changed phone microsoft account
 
 **Direct Answer:**
 
-Do not share verification or recovery codes. Use another recovery method offered by Microsoft.
+Do not share verification or recovery codes. If the expected Microsoft Authenticator approval or code is not arriving, verify the phone, account, and available sign-in methods before trying again.
 
 **Troubleshooting Steps:**
 
-1. Confirm that the device date, time, and time zone are correct.
-2. Use the newest verification code or approval request.
+1. Confirm that the phone has internet access and that Airplane Mode is off.
+2. Open Microsoft Authenticator directly instead of waiting only for a push notification.
 3. Confirm that the request belongs to the intended Microsoft account.
-4. Try another recovery method if Microsoft offers one.
-5. Do not repeatedly enter incorrect codes.
-6. If the verification method is no longer available, use Microsoft's sign-in helper or account-recovery process.
+4. Confirm that the phone date, time, and time zone are correct.
+5. Use the newest code or approval request.
+6. Try another approved verification method if Microsoft offers one.
+7. Stop repeated attempts if verification continues to fail.
 
 **Escalation:**
 
-SJK IT cannot change personal Microsoft verification methods.
-
-If the account belongs to another organization, contact that organization's administrator.
+For an SJK-managed Microsoft account, contact the IT Helpdesk if the phone was replaced, the authenticator is unavailable, or all approved methods fail. For a personal Microsoft account, use Microsoft's account-recovery process. For an account managed by another organization, contact that organization's administrator.
 
 **Bot Instruction:** Never ask the user to paste a verification, backup, recovery, or authenticator code into chat.
-
-
-## Topic: Microsoft Verification Code or Multi-Factor Authentication Problem
-
-**Intent Keywords:** microsoft verification code, mfa not working, authenticator not working, two step verification, lost phone microsoft account
-
-**Direct Answer:**
-
-Do not share verification or recovery codes. If the approved sign-in method is unavailable, contact the IT Helpdesk.
-
-**Troubleshooting Steps:**
-
-1. Confirm that the device date, time, and time zone are correct.
-2. Use the newest code or approval request.
-3. Confirm that the request belongs to the intended Microsoft account.
-4. Try another approved verification method if one is offered.
-5. Do not repeatedly enter incorrect codes.
-
-**Escalation:**
-
-Contact the IT Helpdesk if the phone was replaced, the authenticator is unavailable, or all approved methods fail.
-
-**Bot Instruction:** Never ask the user to paste a verification, backup, recovery, or authenticator code.
-
 
 ## Topic: Microsoft 365 App Says Unlicensed Product or Activation Required
 

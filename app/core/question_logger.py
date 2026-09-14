@@ -4,7 +4,8 @@ import re
 import threading
 from datetime import datetime
 from pathlib import Path
-from zoneinfo import ZoneInfo
+
+from core.time_utils import get_local_timezone
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -80,7 +81,7 @@ def log_user_question(question: str) -> None:
     if not cleaned_question:
         return
 
-    timestamp = datetime.now(ZoneInfo("America/Toronto")).strftime("%Y-%m-%d %H:%M:%S")
+    timestamp = datetime.now(get_local_timezone()).strftime("%Y-%m-%d %H:%M:%S")
     log_line = f"[{timestamp}] {cleaned_question}\n"
 
     with FILE_LOCK:

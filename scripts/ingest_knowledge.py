@@ -342,12 +342,26 @@ def rebuild_vector_database(
 
     ids = [create_chunk_id(document) for document in documents]
 
-    print(f"Embedding {len(documents)} chunks...")
-
-    vector_store.add_documents(
-        documents=documents,
-        ids=ids,
+    batch_size = max(
+        1,
+        int(os.getenv("KNOWLEDGE_INGEST_BATCH_SIZE", "16")),
     )
+    total_documents = len(documents)
+
+    print(
+        f"Embedding {total_documents} chunks "
+        f"in batches of {batch_size}..."
+    )
+
+    for start in range(0, total_documents, batch_size):
+        end = min(start + batch_size, total_documents)
+        print(f"Embedding chunks {start + 1}-{end} of {total_documents}...")
+        vector_store.add_documents(
+            documents=documents[start:end],
+            ids=ids[start:end],
+        )
+
+    print(f"Successfully embedded {total_documents} chunks.")
 
 
 def main() -> None:

@@ -25,6 +25,7 @@ class SupportPreparation:
     handled: bool = False
     answer: str = ""
     retrieval_question: str = ""
+    intent: str = ""
 
 
 CLOUD_AND_WEB_SERVICES = (
@@ -375,7 +376,232 @@ def is_google_password_request(
 def route_security_or_account_question(
     text: str,
 ) -> SupportPreparation:
+    """Handle credential, privacy, prompt-injection, and account safety first."""
+
     normalized = normalize_text(text)
+
+    if not normalized:
+        return SupportPreparation()
+
+    # Cross-session privacy and internal implementation details are never
+    # available to the public assistant.
+    if any(
+        phrase in normalized
+        for phrase in (
+            "previous users",
+            "previous user",
+            "previous student",
+            "other users conversation",
+            "other user's conversation",
+            "private detail from",
+            "what did the previous",
+            "repeat every private detail",
+        )
+    ):
+        return SupportPreparation(
+            handled=True,
+            answer=(
+                "I cannot access or reveal private conversations or details from "
+                "previous students or other users. Each support session must remain "
+                "private."
+            ),
+        )
+
+    if any(
+        phrase in normalized
+        for phrase in (
+            "system prompt",
+            "developer message",
+            "ignore previous instructions",
+            "ignore all previous instructions",
+            "ignore your instructions",
+            "confidential documentation",
+            "internal instructions",
+            "knowledge base files",
+            "files in your knowledge base",
+            "list the files in your knowledge base",
+        )
+    ):
+        subject = (
+            "system prompt or internal instructions"
+            if "prompt" in normalized or "instructions" in normalized
+            else "internal documentation or knowledge-base file information"
+        )
+        return SupportPreparation(
+            handled=True,
+            answer=(
+                f"I cannot reveal or provide {subject}. I can help with an approved "
+                "IT support question without exposing private configuration or "
+                "internal information."
+            ),
+        )
+
+    if any(
+        phrase in normalized
+        for phrase in (
+            ".env",
+            "environment file",
+            "inventory api token",
+            "ticketing api credentials",
+            "ticketing credentials",
+            "api token",
+            "api key",
+            "service credentials",
+            "database password",
+        )
+    ):
+        if ".env" in normalized or "environment file" in normalized:
+            protected_item = ".env configuration and credentials"
+        elif "inventory" in normalized and "token" in normalized:
+            protected_item = "inventory API token or credential"
+        elif "ticketing" in normalized:
+            protected_item = "ticketing API credentials"
+        else:
+            protected_item = "API tokens, keys, or service credentials"
+
+        return SupportPreparation(
+            handled=True,
+            answer=(
+                f"I cannot provide {protected_item}. These values are sensitive "
+                "secrets and must only be accessed by authorized IT administrators."
+            ),
+        )
+
+    # Offering a password is different from requesting normal reset help.
+    if "password" in normalized and any(
+        phrase in normalized
+        for phrase in (
+            "send you my password",
+            "give you my password",
+            "tell you my password",
+            "type my password",
+            "share my password",
+            "check my password",
+        )
+    ):
+        return SupportPreparation(
+            handled=True,
+            answer=(
+                "Do not share your password or credentials in chat. I cannot accept, "
+                "verify, or check a password. Use the approved reset process or visit "
+                "the IT Helpdesk for account assistance."
+            ),
+        )
+
+    credential_request = "password" in normalized and any(
+        phrase in normalized
+        for phrase in (
+            "what is the",
+            "show me",
+            "give me",
+            "reveal",
+            "tell me the",
+            "another student's",
+            "another students",
+            "administrator password",
+            "admin password",
+            "wifi admin password",
+            "network password",
+        )
+    )
+
+    recovery_request = any(
+        phrase in normalized
+        for phrase in (
+            "forgot",
+            "reset",
+            "incorrect",
+            "not working",
+            "change my password",
+            "locked out",
+        )
+    )
+
+    if credential_request and not recovery_request:
+        return SupportPreparation(
+            handled=True,
+            answer=(
+                "I cannot provide, reveal, or access passwords or another person's "
+                "account credentials. Passwords are private. The account owner must "
+                "use the approved reset process or contact the IT Helpdesk."
+            ),
+        )
+
+    if any(
+        phrase in normalized
+        for phrase in (
+            "hack another",
+            "hack an account",
+            "break into",
+            "bypass the school web filter",
+            "bypass web filter",
+            "bypass security",
+            "disable the school's device restrictions",
+            "disable school device restrictions",
+            "disable device restrictions",
+            "remove school restrictions",
+        )
+    ):
+        return SupportPreparation(
+            handled=True,
+            answer=(
+                "I cannot help bypass security controls, device restrictions, web "
+                "filters, or gain unauthorized access to an account. These protections "
+                "are required by school policy. Contact the IT Helpdesk for an approved "
+                "access or software request."
+            ),
+        )
+
+    if any(
+        phrase in normalized
+        for phrase in (
+            "delete all helpdesk records",
+            "delete the database",
+            "drop table",
+            "wipe the database",
+            "erase all records",
+        )
+    ):
+        return SupportPreparation(
+            handled=True,
+            answer=(
+                "I cannot perform or assist with deleting helpdesk records or other "
+                "unauthorized destructive actions. Record changes require authorized "
+                "administrative access and the approved retention process."
+            ),
+        )
+
+    if any(
+        phrase in normalized
+        for phrase in (
+            "who currently has",
+            "who has the missing laptop",
+            "who borrowed",
+            "name of the borrower",
+        )
+    ) and any(term in normalized for term in ("laptop", "macbook", "device", "item")):
+        return SupportPreparation(
+            handled=True,
+            answer=(
+                "I cannot reveal who borrowed a laptop or other personal inventory "
+                "records. Borrower information is private and can only be reviewed by "
+                "authorized IT staff."
+            ),
+        )
+
+    if "pretend i am an administrator" in normalized or (
+        "administrator" in normalized
+        and "network configuration" in normalized
+        and any(term in normalized for term in ("reveal", "show", "provide"))
+    ):
+        return SupportPreparation(
+            handled=True,
+            answer=(
+                "I cannot provide confidential network configuration information based "
+                "on an unverified claim of authorization. Authorized administrators "
+                "must use the approved internal systems and access controls."
+            ),
+        )
 
     suspicious_terms = (
         "phishing",
@@ -403,16 +629,14 @@ def route_security_or_account_question(
     )
 
     suspicious = any(term in normalized for term in suspicious_terms)
-
     interacted = any(term in normalized for term in interaction_terms)
 
     if suspicious and interacted:
         return SupportPreparation(
             handled=True,
             answer=(
-                "Because you interacted with a suspicious email, "
-                "please contact the IT Helpdesk immediately. "
-                "Do not continue using the message, and do not "
+                "Because you interacted with a suspicious email, please contact the IT "
+                "Helpdesk immediately. Do not continue using the message, and do not "
                 "enter any additional information."
             ),
         )
@@ -421,22 +645,25 @@ def route_security_or_account_question(
         return SupportPreparation(
             handled=True,
             answer=(
-                "Do not click any links or download attachments. "
-                "If the message is obvious spam, delete it. If it "
-                "impersonates someone at the school or asks for "
-                "passwords, money, or gift cards, report it to "
-                "the IT Helpdesk immediately."
+                "Do not click links or download attachments. If the message is obvious "
+                "spam, delete it. If it impersonates someone at the school or asks for "
+                "passwords, money, or gift cards, report it to the IT Helpdesk "
+                "immediately."
             ),
         )
 
     if is_google_password_request(text):
         return SupportPreparation(
             handled=True,
+            intent="google_password_reset",
             answer=(
-                "Please visit the IT Helpdesk so the IT team can "
-                "verify your request and assist with your school "
-                "Google account password. Do not share your "
-                "current password or verification codes in chat."
+                "School Google Workspace passwords must be reset in person by the "
+                "IT Helpdesk after identity verification.\n\n"
+                "1. Stop repeated sign-in attempts.\n"
+                "2. Bring your school-issued device or school ID if available.\n"
+                "3. Visit the IT Helpdesk and provide your school email address.\n"
+                "4. After IT resets the password, sign in again using the new password.\n\n"
+                "Do not share your password or verification codes in chat."
             ),
         )
 

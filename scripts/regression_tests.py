@@ -27,6 +27,9 @@ from core.conversation_context import (  # noqa: E402
 from core.conversation_router import (  # noqa: E402
     route_conversation_message,
 )
+from core.extended_support_router import (  # noqa: E402
+    route_extended_support_question,
+)
 import core.assistant as assistant  # noqa: E402
 import core.inventory_router as inventory  # noqa: E402
 import core.rag as rag  # noqa: E402
@@ -146,6 +149,65 @@ class RoutingRegressionTests(unittest.TestCase):
         self.assertIn(
             "USB-C Cable",
             result.answer,
+        )
+
+    def test_named_inventory_item_beats_list_language(
+        self,
+    ) -> None:
+        result = inventory.route_inventory_question(
+            "Check the live inventory to see if any MacBooks are available.",
+            [],
+        )
+
+        self.assertTrue(result.handled)
+        self.assertIn("MacBook", result.answer)
+        self.assertIn("2", result.answer)
+        self.assertNotIn("USB-C Cable", result.answer)
+
+    def test_extended_support_prevents_cross_topic_rag(
+        self,
+    ) -> None:
+        cases = {
+            "How do I troubleshoot a DNS server not responding error?": "DNS",
+            "Why is the staff copier asking for a PIN?": "PIN",
+            "How do I reopen a closed helpdesk ticket?": "reopen",
+            "Why is my Python script not running?": "Python",
+            "How do I safely clean my device screen?": "microfiber",
+        }
+
+        for question, expected in cases.items():
+            with self.subTest(question=question):
+                decision = route_extended_support_question(question, [])
+                self.assertTrue(decision.handled)
+                self.assertIn(expected.lower(), decision.answer.lower())
+
+    def test_feedback_worthy_wifi_and_capability_answers(
+        self,
+    ) -> None:
+        from core.feedback_policy import is_feedback_eligible_response
+
+        capability = assistant.prepare_answer(
+            "What can you help me with?",
+            [],
+        )
+        self.assertIsNotNone(capability.direct_answer)
+        self.assertTrue(
+            is_feedback_eligible_response(
+                str(capability.direct_answer),
+                route="direct",
+            )
+        )
+
+        wifi = assistant.prepare_answer(
+            "How do I connect to Student Wi-Fi?",
+            [],
+        )
+        self.assertIsNotNone(wifi.direct_answer)
+        self.assertTrue(
+            is_feedback_eligible_response(
+                str(wifi.direct_answer),
+                route="direct",
+            )
         )
 
     def test_inventory_list(
@@ -875,7 +937,12 @@ class RoutingRegressionTests(unittest.TestCase):
         self.assertTrue(out.handled)
 
         self.assertIn(
-            "supervisor",
+            "non-IT",
+            out.answer,
+        )
+
+        self.assertIn(
+            "Wi-Fi",
             out.answer,
         )
 

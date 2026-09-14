@@ -262,6 +262,102 @@ ITEM_ALIASES: dict[
 }
 
 
+CANONICAL_REQUEST_ALIASES: dict[str, tuple[str, ...]] = {
+    "MacBook": ("macbook", "mackbook", "mac book", "apple laptop"),
+    "USB-C Charger": (
+        "usb c charger",
+        "usb-c charger",
+        "type c charger",
+        "usb c power adapter",
+    ),
+    "Micro-USB Cable": (
+        "micro usb cable",
+        "micro-usb cable",
+        "micro usb cord",
+    ),
+    "USB-C Cable": ("usb c cable", "usb-c cable", "type c cable"),
+    "Chromebook": ("chromebook", "chrome book"),
+    "iPad": ("ipad", "tablet"),
+}
+
+
+def requested_canonical_names(question: str) -> tuple[str, ...]:
+    """Identify named hardware even when it is missing from the API payload."""
+
+    normalized = normalize_text(question)
+    matches: list[str] = []
+
+    for display_name, aliases in CANONICAL_REQUEST_ALIASES.items():
+        if any(
+            alias in normalized or alias.replace("-", " ") in normalized
+            for alias in aliases
+        ):
+            matches.append(display_name)
+
+    # A generic charger request is intentionally kept broad. Prefer an exact
+    # charger in the API later, but do not confuse it with a cable.
+    if "charger" in normalized and not any("Charger" in name for name in matches):
+        matches.append("Charger")
+
+    # Common misspelling observed during acceptance testing.
+    if "mackbook" in normalized and "MacBook" not in matches:
+        matches.append("MacBook")
+
+    return tuple(dict.fromkeys(matches))
+
+
+def recent_inventory_subject(
+    history: list[dict[str, Any]],
+    current_question: str,
+) -> str:
+    current = normalize_text(current_question)
+
+    for message in reversed(history[-12:]):
+        if message.get("role") != "user":
+            continue
+        content = str(message.get("content", "")).strip()
+        if not content or normalize_text(content) == current:
+            continue
+        names = requested_canonical_names(content)
+        if names:
+            return names[-1]
+
+    return ""
+
+
+def find_item_for_canonical(
+    canonical_name: str,
+    items: list[InventoryItem],
+) -> InventoryItem | None:
+    normalized_canonical = normalize_text(canonical_name)
+
+    # First prefer an exact type name or configured alias.
+    for item in items:
+        terms = get_item_search_terms(item)
+        if any(normalize_text(term) == normalized_canonical for term in terms):
+            return item
+
+    # Then allow a contained product class, while keeping chargers separate
+    # from cables and adapters.
+    for item in items:
+        item_name = normalize_text(item.typeName)
+        if canonical_name == "Charger":
+            if "charger" in item_name:
+                return item
+        elif normalized_canonical in item_name or item_name in normalized_canonical:
+            return item
+
+    return None
+
+
+def format_missing_inventory_item(canonical_name: str) -> str:
+    return (
+        f"**{canonical_name}** is not listed in the current live inventory "
+        "response, so no available count can be confirmed right now. "
+        "Please contact the IT Helpdesk to check stock or an alternative."
+    )
+
+
 UNCONDITIONAL_INVENTORY_PHRASES = (
     "can i borrow",
     "could i borrow",
@@ -311,6 +407,7 @@ POSSIBLE_ITEM_REQUEST_PHRASES = (
 
 HARDWARE_TERMS = (
     "macbook",
+    "mackbook",
     "laptop",
     "computer",
     "chromebook",
@@ -903,16 +1000,49 @@ def route_inventory_question(
     question: str,
     history: list[dict[str, Any]],
 ) -> InventoryDecision:
-    if is_hardware_troubleshooting_request(question):
+    normalized = normalize_text(question)
+
+    if any(
+        phrase in normalized
+        for phrase in (
+            "reserve a",
+            "reserve an",
+            "hold a macbook",
+            "save a macbook for me",
+        )
+    ):
+        return InventoryDecision(
+            handled=True,
+            answer=(
+                "I can check live inventory, but I cannot reserve or hold an item. "
+                "Please visit or contact the IT Helpdesk to request a loaner. "
+                "Availability may change before pickup."
+            ),
+        )
+
+    # Resolve short availability follow-ups from the most recently named item.
+    effective_question = question
+    if normalized in {
+        "how many are available",
+        "how many are left",
+        "are any available",
+        "what about availability",
+    }:
+        recent_subject = recent_inventory_subject(history, question)
+        if recent_subject:
+            effective_question = f"How many {recent_subject} are available?"
+            normalized = normalize_text(effective_question)
+
+    if is_hardware_troubleshooting_request(effective_question):
         return InventoryDecision(handled=False)
 
     explicit_request = is_inventory_request(
-        question,
+        effective_question,
         history,
     )
 
     possible_request = is_possible_item_request(
-        question,
+        effective_question,
         history,
     )
 
@@ -925,13 +1055,33 @@ def route_inventory_question(
     except InventoryServiceError as error:
         print(f"Inventory lookup failed: {type(error).__name__}: {error}")
 
+        requested_items = requested_canonical_names(effective_question)
+        if requested_items:
+            item_text = ", ".join(requested_items)
+            return InventoryDecision(
+                handled=True,
+                answer=(
+                    f"I cannot check live **{item_text}** availability right now. "
+                    "Please contact the IT Helpdesk for the current inventory status "
+                    "before borrowing or picking up a loaner item."
+                ),
+            )
+
+        if any(term in normalized for term in ("laptop", "computer", "loaner", "loner")):
+            return InventoryDecision(
+                handled=True,
+                answer=(
+                    "I cannot check live **loaner laptop** availability right now. "
+                    "Please contact the IT Helpdesk for the current inventory status, "
+                    "especially if you need a loaner urgently for a class or test."
+                ),
+            )
+
         return InventoryDecision(
             handled=True,
             answer=(
-                "I cannot check live hardware "
-                "availability right now. Please "
-                "contact the IT Helpdesk for the "
-                "current inventory status."
+                "I cannot check live hardware availability right now. Please contact "
+                "the IT Helpdesk for the current inventory status."
             ),
         )
 
@@ -945,14 +1095,30 @@ def route_inventory_question(
             ),
         )
 
-    if is_inventory_list_request(question):
+    canonical_names = requested_canonical_names(effective_question)
+
+    # A named item must take precedence over broad phrases such as
+    # "check the live inventory". Otherwise a Chromebook question can
+    # incorrectly return every available item in the API payload.
+    if not canonical_names and is_inventory_list_request(effective_question):
         return InventoryDecision(
             handled=True,
             answer=format_available_inventory(payload.types),
         )
 
+    if len(canonical_names) > 1:
+        answers: list[str] = []
+        for canonical_name in canonical_names:
+            item = find_item_for_canonical(canonical_name, payload.types)
+            answers.append(
+                format_inventory_answer(item)
+                if item is not None
+                else format_missing_inventory_item(canonical_name)
+            )
+        return InventoryDecision(handled=True, answer="\n\n".join(answers))
+
     match = match_inventory_item(
-        question,
+        effective_question,
         payload.types,
     )
 
@@ -970,14 +1136,51 @@ def route_inventory_question(
         )
 
     if match.item is None:
+        if canonical_names:
+            return InventoryDecision(
+                handled=True,
+                answer=format_missing_inventory_item(canonical_names[0]),
+            )
+
+        generic_hardware = any(
+            term in normalized
+            for term in ("laptop", "computer", "charger", "tablet")
+        )
+        if generic_hardware:
+            matching_types = [
+                item.typeName
+                for item in payload.types
+                if any(
+                    term in normalize_text(item.typeName)
+                    for term in ("laptop", "macbook", "chromebook", "charger", "ipad")
+                )
+            ]
+            if matching_types:
+                options = "\n".join(f"- **{name}**" for name in matching_types[:8])
+                return InventoryDecision(
+                    handled=True,
+                    answer=(
+                        "Which inventory item would you like me to check?\n\n"
+                        f"{options}"
+                    ),
+                )
+
+            return InventoryDecision(
+                handled=True,
+                answer=(
+                    "No matching laptop, computer, charger, or tablet is listed in "
+                    "the current live inventory response. Please contact the IT "
+                    "Helpdesk to confirm availability."
+                ),
+            )
+
         examples = "\n".join(f"- **{item.typeName}**" for item in payload.types[:8])
 
         return InventoryDecision(
             handled=True,
             answer=(
-                "I could not identify the requested "
-                "inventory item. Which hardware item "
-                "would you like me to check?"
+                "I could not identify the requested inventory item. Which hardware "
+                "item would you like me to check?"
                 + (f"\n\nExamples:\n{examples}" if examples else "")
             ),
         )

@@ -1,5 +1,4 @@
 ---
-
 title: Windows Basic Troubleshooting
 topic: windows_support
 platform: windows

@@ -5,7 +5,7 @@ platform: cross-platform
 audience: public
 document_type: support_procedure
 workflow: zoom_basic_support
-version: 1.0
+version: 1.1
 ---
 
 # Zoom Workplace and Meetings School Support
@@ -111,7 +111,7 @@ Contact the IT Helpdesk when a managed school device does not meet the requireme
 
 ## Topic: Join a Zoom Test Meeting
 
-**Intent Keywords:** zoom test meeting, test zoom before class, test microphone camera zoom, zoom us test
+**Intent Keywords:** zoom test meeting, test zoom before class, test microphone camera zoom, zoom test meeting
 
 **Direct Answer:**
 

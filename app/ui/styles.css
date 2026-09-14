@@ -3,25 +3,31 @@
    ========================================================= */
 
 :root {
-    --sjk-blue: #0872ad;
-    --sjk-blue-dark: #0066a7;
-    --sjk-gold: #eba600;
+    /* ALTITUDE professional school theme */
+    --sjk-navy: #002B4F;
+    --sjk-navy-dark: #002244;
+    --sjk-blue: #2563EB;
+    --sjk-blue-dark: #1D4ED8;
+    --sjk-gold: #FFC107;
 
-    --page-background: #edf2f8;
-    --panel-background: #ffffff;
-    --chat-background: #f8fafc;
-    --card-background: #f3f6f9;
+    --page-background: #F4F6F8;
+    --panel-background: #FFFFFF;
+    --chat-background: #F8FAFC;
+    --card-background: #FFFFFF;
 
-    --assistant-background: #e7e9ed;
-    --assistant-border: #dfe4e8;
+    --assistant-background: #F1F5F9;
+    --assistant-border: #E2E8F0;
 
-    --student-background: #dceefa;
-    --student-border: #c7e0ee;
+    --student-background: #EFF6FF;
+    --student-border: #BFDBFE;
 
-    --text-primary: #15191d;
-    --text-muted: #697581;
-    --border-color: #d8e0e8;
-    --scrollbar-color: #aab6c2;
+    --text-primary: #1F2937;
+    --text-muted: #6B7280;
+    --border-color: #E5E7EB;
+    --scrollbar-color: #CBD5E1;
+
+    --success-color: #16A34A;
+    --danger-color: #DC2626;
 
     --header-height: 108px;
     --page-gap: 12px;
@@ -144,7 +150,7 @@ The Streamlit page contains:
     grid-template-columns: 1fr auto 1fr !important;
     align-items: center !important;
 
-    background: var(--sjk-blue) !important;
+    background: var(--sjk-navy) !important;
 }
 
 
@@ -1426,7 +1432,7 @@ div[data-baseweb="textarea"] {
     width: 7px !important;
     height: 7px !important;
 
-    background: #0872ad !important;
+    background: var(--sjk-blue) !important;
     border-radius: 50% !important;
 
     animation:
@@ -3712,9 +3718,9 @@ Nothing outside the left panel is changed.
     background:
         linear-gradient(
             90deg,
-            #0872ad 0%,
-            #0872ad 58%,
-            #076ba3 100%
+            var(--sjk-navy) 0%,
+            var(--sjk-navy) 58%,
+            var(--sjk-navy-dark) 100%
         ) !important;
 
     border: none !important;
@@ -4087,5 +4093,572 @@ Nothing outside the left panel is changed.
         animation: none !important;
         transition: none !important;
     }
+}
+
+
+/* =========================================================
+   FEATURE 3 — Compact response-feedback controls
+   Keep this section at the end of styles.css.
+   ========================================================= */
+
+/* Feedback is deliberately outside the fit-content answer bubble. */
+.st-key-chat_scroll_area
+[class*="st-key-assistant_feedback_"] {
+    width: min(100%, 680px) !important;
+    max-width: 100% !important;
+
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+
+    margin: -6px 0 14px 3px !important;
+    padding: 8px 2px 0 !important;
+
+    background: transparent !important;
+    border: 0 !important;
+    border-top: 1px solid rgba(105, 117, 129, 0.24) !important;
+    border-radius: 0 !important;
+
+    overflow: visible !important;
+}
+
+.st-key-chat_scroll_area
+[class*="st-key-assistant_feedback_"]
+> [data-testid="stVerticalBlock"],
+.st-key-chat_scroll_area
+[class*="st-key-assistant_feedback_"]
+[data-testid="stVerticalBlock"] {
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+
+    gap: 0.35rem !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    overflow: visible !important;
+}
+
+/* One compact grid: prompt | Yes | No. */
+.st-key-chat_scroll_area
+[class*="st-key-feedback_actions_"] {
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    background: transparent !important;
+    border: 0 !important;
+}
+
+.st-key-chat_scroll_area
+[class*="st-key-feedback_actions_"][data-testid="stHorizontalBlock"],
+.st-key-chat_scroll_area
+[class*="st-key-feedback_actions_"]
+[data-testid="stHorizontalBlock"] {
+    display: grid !important;
+    grid-template-columns: minmax(150px, 1fr) auto auto !important;
+    align-items: center !important;
+
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+
+    gap: 8px !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    overflow: visible !important;
+}
+
+.st-key-chat_scroll_area
+[class*="st-key-feedback_actions_"][data-testid="stHorizontalBlock"]
+> [data-testid="stColumn"],
+.st-key-chat_scroll_area
+[class*="st-key-feedback_actions_"]
+[data-testid="stHorizontalBlock"]
+> [data-testid="stColumn"] {
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+
+    height: auto !important;
+    min-height: 0 !important;
+
+    flex: none !important;
+    align-self: center !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    overflow: visible !important;
+}
+
+.sjk-feedback-prompt {
+    display: inline-flex;
+    align-items: center;
+
+    min-height: 34px;
+
+    color: var(--text-muted);
+
+    font-size: 0.86rem;
+    font-weight: 650;
+    line-height: 1.2;
+}
+
+/* Compact pill buttons instead of large message-width buttons. */
+.st-key-chat_scroll_area
+[class*="st-key-feedback_actions_"]
+.stButton > button {
+    width: auto !important;
+    min-width: 82px !important;
+    min-height: 34px !important;
+
+    padding: 0.28rem 0.72rem !important;
+
+    border-radius: 999px !important;
+
+    font-size: 0.84rem !important;
+    font-weight: 650 !important;
+    line-height: 1.1 !important;
+    white-space: nowrap !important;
+}
+
+.st-key-chat_scroll_area
+[class*="st-key-feedback_actions_"]
+.stButton > button:disabled {
+    border-color: #8ab6d0 !important;
+    background: #e8f3f9 !important;
+    color: #075f91 !important;
+    opacity: 1 !important;
+}
+
+/* The saved-state message is a quiet one-line caption, not a large alert. */
+.st-key-chat_scroll_area
+[class*="st-key-assistant_feedback_"][data-testid="stCaptionContainer"],
+.st-key-chat_scroll_area
+[class*="st-key-assistant_feedback_"]
+[data-testid="stCaptionContainer"] {
+    margin: 0 !important;
+    padding: 0 2px !important;
+
+    color: var(--text-muted) !important;
+
+    font-size: 0.79rem !important;
+    line-height: 1.35 !important;
+}
+
+/* Negative-feedback editor. */
+.st-key-chat_scroll_area
+[class*="st-key-negative_feedback_form_"] {
+    width: min(100%, 560px) !important;
+
+    margin: 6px 0 2px !important;
+    padding: 12px !important;
+
+    background: #ffffff !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: 12px !important;
+
+    box-shadow: 0 3px 12px rgba(24, 54, 79, 0.06) !important;
+}
+
+.st-key-chat_scroll_area
+[class*="st-key-negative_feedback_form_"][data-testid="stForm"],
+.st-key-chat_scroll_area
+[class*="st-key-negative_feedback_form_"]
+[data-testid="stForm"] {
+    border: 0 !important;
+    padding: 0 !important;
+}
+
+.st-key-chat_scroll_area
+[class*="st-key-negative_feedback_form_"][data-testid="stVerticalBlock"],
+.st-key-chat_scroll_area
+[class*="st-key-negative_feedback_form_"]
+[data-testid="stVerticalBlock"] {
+    gap: 0.55rem !important;
+}
+
+.st-key-chat_scroll_area
+[class*="st-key-negative_feedback_form_"]
+textarea {
+    min-height: 76px !important;
+}
+
+@media (max-width: 599px) {
+    .st-key-chat_scroll_area
+    [class*="st-key-assistant_feedback_"] {
+        width: 100% !important;
+
+        margin: -5px 0 12px 0 !important;
+        padding-top: 7px !important;
+    }
+
+    .st-key-chat_scroll_area
+    [class*="st-key-feedback_actions_"]
+    [data-testid="stHorizontalBlock"] {
+        grid-template-columns: minmax(112px, 1fr) auto auto !important;
+        gap: 6px !important;
+    }
+
+    .sjk-feedback-prompt {
+        min-height: 32px;
+        font-size: 0.78rem;
+    }
+
+    .st-key-chat_scroll_area
+    [class*="st-key-feedback_actions_"]
+    .stButton > button {
+        min-width: 68px !important;
+        min-height: 32px !important;
+
+        padding: 0.22rem 0.52rem !important;
+
+        font-size: 0.78rem !important;
+    }
+
+    .st-key-chat_scroll_area
+    [class*="st-key-negative_feedback_form_"] {
+        width: 100% !important;
+        padding: 10px !important;
+    }
+}
+
+@media (max-width: 390px) {
+    .st-key-chat_scroll_area
+    [class*="st-key-feedback_actions_"]
+    [data-testid="stHorizontalBlock"] {
+        grid-template-columns: 1fr auto auto !important;
+        gap: 5px !important;
+    }
+
+    .sjk-feedback-prompt {
+        font-size: 0.73rem;
+    }
+
+    .st-key-chat_scroll_area
+    [class*="st-key-feedback_actions_"]
+    .stButton > button {
+        min-width: 61px !important;
+        padding-inline: 0.38rem !important;
+        font-size: 0.74rem !important;
+    }
+}
+
+/* Remove Streamlit's default paragraph margin from the feedback prompt. */
+.st-key-chat_scroll_area
+[class*="st-key-feedback_actions_"]
+[data-testid="stMarkdownContainer"],
+.st-key-chat_scroll_area
+[class*="st-key-feedback_actions_"]
+[data-testid="stMarkdownContainer"] p {
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* =========================================================
+   Shared header route shortcut — Support Chat / IT Admin
+   ========================================================= */
+
+.sjk-header-right {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.sjk-header-route-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    min-height: 38px;
+    padding: 0.45rem 0.78rem;
+    border: 1px solid rgba(255, 255, 255, 0.55);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.12);
+    color: #ffffff !important;
+    font-size: 0.78rem;
+    font-weight: 750;
+    line-height: 1;
+    text-decoration: none !important;
+    box-shadow: 0 4px 12px rgba(0, 54, 88, 0.12);
+    transition:
+        background 140ms ease,
+        border-color 140ms ease,
+        transform 140ms ease;
+}
+
+.sjk-header-route-link:hover {
+    background: rgba(255, 255, 255, 0.22);
+    border-color: rgba(255, 255, 255, 0.85);
+    color: #ffffff !important;
+    transform: translateY(-1px);
+}
+
+@media (max-width: 760px) {
+    .sjk-header-right {
+        display: none !important;
+    }
+}
+
+/* =========================================================
+   ALTITUDE CHAT — database-backed announcements
+   ========================================================= */
+
+.sjk-announcements-header {
+    flex: 0 0 auto !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 8px !important;
+}
+
+.sjk-announcements-header > span {
+    flex: 0 0 auto;
+    padding: 4px 7px;
+    color: #426272;
+    background: #edf4f8;
+    border-radius: 999px;
+    font-size: 0.62rem;
+    font-weight: 750;
+    white-space: nowrap;
+}
+
+.sjk-announcement-item {
+    position: relative;
+    width: 100%;
+    margin: 0 0 9px;
+    padding: 10px 10px 10px 13px;
+    background: #f8fafc;
+    border: 1px solid #e3e9ee;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.sjk-announcement-item:last-child {
+    margin-bottom: 0;
+}
+
+.sjk-announcement-item::before {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 3px;
+    content: "";
+    background: var(--sjk-blue);
+}
+
+.sjk-announcement-info::before { background: #167caf; }
+.sjk-announcement-maintenance::before { background: #d79c08; }
+.sjk-announcement-warning::before { background: #c77712; }
+.sjk-announcement-outage::before { background: #c24a4a; }
+.sjk-announcement-resolved::before { background: #2d8d5a; }
+
+.sjk-announcement-item-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 5px;
+}
+
+.sjk-announcement-item-heading strong {
+    min-width: 0;
+    color: var(--text-primary);
+    font-size: 0.78rem;
+    font-weight: 760;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+}
+
+.sjk-announcement-item-heading span {
+    flex: 0 0 auto;
+    color: var(--text-muted);
+    font-size: 0.56rem;
+    font-weight: 750;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.sjk-announcement-item p {
+    margin: 0 !important;
+    color: #42515f !important;
+    font-size: 0.72rem !important;
+    line-height: 1.45 !important;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.sjk-announcement-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 90px;
+    padding: 14px;
+    color: var(--text-muted);
+    background: #f8fafc;
+    border: 1px dashed #d9e1e7;
+    border-radius: 10px;
+    font-size: 0.72rem;
+    line-height: 1.4;
+    text-align: center;
+}
+
+.sjk-announcements-scroll {
+    scroll-behavior: smooth;
+    overscroll-behavior: contain;
+}
+
+/* =========================================================
+   ALTITUDE — PROFESSIONAL NAVY / BLUE THEME
+   Presentation-only overrides. Keep this section last so the
+   colour system stays consistent across Streamlit versions.
+   ========================================================= */
+
+/* Main application chrome */
+.sjk-header {
+    background: linear-gradient(
+        90deg,
+        var(--sjk-navy) 0%,
+        var(--sjk-navy) 58%,
+        var(--sjk-navy-dark) 100%
+    ) !important;
+    box-shadow: 0 3px 14px rgba(0, 34, 68, 0.24) !important;
+}
+
+.sjk-subtitle,
+.altitude-tagline {
+    color: rgba(255, 255, 255, 0.82) !important;
+}
+
+.sjk-header-route-link {
+    border-color: rgba(255, 255, 255, 0.42) !important;
+    background: rgba(255, 255, 255, 0.10) !important;
+}
+
+.sjk-header-route-link:hover {
+    border-color: rgba(255, 193, 7, 0.92) !important;
+    background: rgba(255, 193, 7, 0.16) !important;
+}
+
+/* Panels and cards */
+.st-key-left_panel_shell,
+.st-key-main_panel_shell,
+.sjk-card,
+.sjk-announcements-card,
+.sjk-inventory-card,
+.sjk-privacy-card,
+.announcements-card,
+.inventory-card,
+.privacy-card {
+    background: #FFFFFF !important;
+    border-color: var(--border-color) !important;
+}
+
+.st-key-left_panel_shell,
+.st-key-main_panel_shell {
+    box-shadow: 0 4px 14px rgba(0, 43, 79, 0.06) !important;
+}
+
+.sjk-announcements-card h2,
+.sjk-inventory-card h2,
+.announcements-card h2,
+.inventory-card h2,
+.privacy-heading {
+    color: var(--sjk-navy) !important;
+}
+
+/* Conversation area */
+.st-key-chat_scroll_area {
+    background: #F8FAFC !important;
+    border-color: #E5E7EB !important;
+}
+
+.st-key-chat_scroll_area [class*="st-key-assistant_message_"] {
+    background: #FFFFFF !important;
+    border-color: #E5E7EB !important;
+    box-shadow: 0 2px 8px rgba(0, 43, 79, 0.05) !important;
+}
+
+.st-key-chat_scroll_area [class*="st-key-user_message_"] {
+    background: #EFF6FF !important;
+    border-color: #BFDBFE !important;
+}
+
+/* Primary buttons */
+.stButton > button {
+    background: var(--sjk-blue) !important;
+    border-color: var(--sjk-blue) !important;
+    color: #FFFFFF !important;
+    box-shadow: 0 2px 7px rgba(37, 99, 235, 0.18) !important;
+}
+
+.stButton > button:hover {
+    background: var(--sjk-blue-dark) !important;
+    border-color: var(--sjk-blue-dark) !important;
+    color: #FFFFFF !important;
+}
+
+.stButton > button:focus-visible {
+    outline: 3px solid rgba(37, 99, 235, 0.20) !important;
+    outline-offset: 2px !important;
+}
+
+/* Chat composer send action */
+.st-key-sjk_support_chat button {
+    background: var(--sjk-blue) !important;
+    color: #FFFFFF !important;
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.22) !important;
+}
+
+.st-key-sjk_support_chat button:hover {
+    background: var(--sjk-blue-dark) !important;
+}
+
+.st-key-sjk_support_chat button:disabled {
+    background: #E5E7EB !important;
+    color: #9CA3AF !important;
+    box-shadow: none !important;
+}
+
+/* Form focus */
+textarea:focus,
+input:focus,
+[data-baseweb="select"]:focus-within {
+    border-color: var(--sjk-blue) !important;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.14) !important;
+}
+
+/* Informational badges and list accents */
+.sjk-announcements-header > span {
+    background: #EFF6FF !important;
+    color: var(--sjk-navy) !important;
+}
+
+.sjk-announcement-info::before {
+    background: var(--sjk-blue) !important;
+}
+
+.sjk-announcement-maintenance::before,
+.sjk-announcement-warning::before {
+    background: var(--sjk-gold) !important;
+}
+
+.sjk-inventory-count,
+.inventory-item-count {
+    background: #DCFCE7 !important;
+    color: #166534 !important;
+}
+
+/* Gold remains an accent rather than a primary action colour. */
+.sjk-greeting strong,
+.sjk-greeting b {
+    color: var(--sjk-gold) !important;
 }
 

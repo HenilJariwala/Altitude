@@ -5,6 +5,7 @@ from typing import Any
 
 from core.platform_context import detect_platform
 from core.text_matching import normalize_text
+from core.topic_context import build_topic_context
 
 
 @dataclass(frozen=True)
@@ -356,6 +357,10 @@ def route_airplay_question(
     history: list[dict[str, Any]],
 ) -> AirPlayDecision:
     """Handle AirPlay and Apple TV screen-sharing requests."""
+
+    topic_context = build_topic_context(question, history)
+    if not topic_context.allows("airplay"):
+        return AirPlayDecision(handled=False)
 
     if not is_airplay_request(
         question,

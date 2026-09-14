@@ -4,7 +4,7 @@ topic: general_it_support
 audience: public
 document_type: support_procedure
 workflow: day_to_day_troubleshooting
-version: 1.0
+version: 1.1
 ---
 
 
@@ -26,11 +26,11 @@ version: 1.0
 **Bot Instruction:** If the user mentions clicking a link in a suspicious email, immediately escalate to the IT Helpdesk. Otherwise, provide the standard guidance.
 
 **Direct Answer:**
-If you receive an email that looks suspicious, the most important rule is: **Do not click any links or download any attachments.** 
+If you receive an email that looks suspicious, the most important rule is: **Do not click any links or download any attachments.**
 
 **Next Steps:**
 1. **Delete it:** If it is obvious spam, simply delete the email from your inbox.
-2. **Report it:** If the email looks highly suspicious, appears to be impersonating someone at the school, or asks for passwords/money, please report it to the IT Helpdesk immediately so we can investigate and block the sender campus-wide.
+2. **Report it:** If the email looks highly suspicious, appears to impersonate someone at the school, or asks for passwords or money, report it to the IT Helpdesk immediately so the message can be investigated and the sender can be blocked if necessary.
 
 ---
 
@@ -41,15 +41,14 @@ If you receive an email that looks suspicious, the most important rule is: **Do 
 **Bot Instruction:** Use this procedure only when the user says an expected email from a known external vendor or sender is missing. Do not use this procedure when the user received a suspicious, strange, fake, or unexpected email.
 
 **Direct Answer:**
-If you are expecting an email from an external vendor and haven't received it, it may have been caught by our spam filters. 
+If you are expecting an email from an external vendor and have not received it, the message may have been caught by the school's spam filters.
 
 **Troubleshooting Steps:**
 1. **Check the Junk/Spam folder:** Open your email client and navigate to the "Junk Email" or "Spam" folder to see if the message was routed there by mistake.
-2. **Safelist the Sender:** 
+2. **Safelist the Sender:**
    - If you find the email in your Junk folder, right-click the message.
-   - Select **Junk** -> **Not Junk** (or click "Report as not spam" if using webmail). 
+   - Select **Junk** -> **Not Junk** (or click "Report as not spam" if using webmail).
    - This will "safelist" the vendor, ensuring future emails from that address go directly to your inbox.
-3. If the email is not in your Junk folder, the vendor's domain may be blocked by the network firewall. Please contact the IT Helpdesk with the vendor's email address so we can trace the message.
+3. If the email is not in your Junk or Spam folder, contact the IT Helpdesk with the sender's email address, approximate send time, and subject so IT can trace the message.
 
 ---
-
