@@ -246,7 +246,7 @@ class RoutingRegressionTests(unittest.TestCase):
         )
 
         self.assertIn(
-            "Windows",
+            "Chromebook",
             first.answer,
         )
 
@@ -335,7 +335,7 @@ class RoutingRegressionTests(unittest.TestCase):
         )
 
         self.assertIn(
-            "Windows",
+            "Chromebook",
             first.answer,
         )
 
@@ -396,7 +396,7 @@ class RoutingRegressionTests(unittest.TestCase):
 
         self.assertTrue(result.handled)
         self.assertIn("Mac", result.answer)
-        self.assertIn("Windows", result.answer)
+        self.assertIn("Chromebook", result.answer)
 
     def test_natural_mac_follow_up_preserves_issue(
         self,
@@ -479,7 +479,7 @@ class RoutingRegressionTests(unittest.TestCase):
             },
             {
                 "role": "assistant",
-                "content": "Are you using Mac or Windows?",
+                "content": "Are you using Mac or Chromebook?",
             },
             {
                 "role": "user",
@@ -586,7 +586,7 @@ class RoutingRegressionTests(unittest.TestCase):
             },
             {
                 "role": "assistant",
-                "content": "Are you using a Mac or Windows device?",
+                "content": "Are you using a Mac or Chromebook?",
             },
             {
                 "role": "user",
@@ -612,39 +612,21 @@ class RoutingRegressionTests(unittest.TestCase):
         )
         self.assertNotIn("Task Manager", plan.context)
 
-    def test_microsoft_word_learning_request_is_it_help(
+    def test_microsoft_product_request_is_marked_unsupported(
         self,
     ) -> None:
-        history = [
-            {
-                "role": "user",
-                "content": "Help me with Google Docs",
-            },
-            {
-                "role": "assistant",
-                "content": (
-                    "What would you like help with in Google Docs?"
-                ),
-            },
-            {
-                "role": "user",
-                "content": (
-                    "I want to learn about Microsoft Word"
-                ),
-            },
-        ]
-
         plan = assistant.prepare_answer(
             "I want to learn about Microsoft Word",
-            history,
+            [],
         )
 
         self.assertIsNotNone(plan.direct_answer)
-        self.assertIn("Microsoft Word", plan.direct_answer or "")
-        self.assertNotEqual(
-            plan.direct_answer,
-            assistant.OUT_OF_SCOPE_MESSAGE,
+        self.assertEqual(plan.intent, "unsupported_microsoft")
+        self.assertIn(
+            "not part of the school's supported technology environment",
+            plan.direct_answer or "",
         )
+        self.assertNotIn("Forgot password", plan.direct_answer or "")
 
     def test_new_product_does_not_inherit_old_product_context(
         self,
@@ -663,13 +645,13 @@ class RoutingRegressionTests(unittest.TestCase):
         ]
 
         query = rag.build_retrieval_query(
-            "How do I save a Microsoft Word file as PDF?",
+            "How do I print a PDF in Adobe Acrobat?",
             history,
         )
 
         self.assertEqual(
             query,
-            "How do I save a Microsoft Word file as PDF?",
+            "How do I print a PDF in Adobe Acrobat?",
         )
         self.assertNotIn("Google Docs", query)
 
@@ -703,7 +685,7 @@ class RoutingRegressionTests(unittest.TestCase):
             },
             {
                 "role": "assistant",
-                "content": "Are you using a Mac or Windows device?",
+                "content": "Are you using a Mac or Chromebook?",
             },
             {
                 "role": "user",

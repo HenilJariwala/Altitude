@@ -310,6 +310,7 @@ def check_project_structure() -> str:
         "app/core/analytics_db.py",
         "app/core/admin_auth.py",
         "app/core/inventory_router.py",
+        "app/core/web_support.py",
         "app/core/ticketing_client.py",
         "app/core/system_health.py",
         "app/ui/styles.css",
@@ -341,6 +342,7 @@ def check_required_packages() -> str:
         "rapidfuzz",
         "numpy",
         "streamlit-cookies-controller",
+        "ddgs",
     )
     missing: list[str] = []
     versions: list[str] = []
@@ -423,6 +425,7 @@ def check_app_imports() -> str:
         "core.assistant",
         "core.conversation_router",
         "core.inventory_router",
+        "core.rate_limiter",
         "core.resolution_notifications",
         "core.system_health",
         "core.ticketing_client",
@@ -1201,16 +1204,48 @@ def check_manual_browser_acceptance() -> str:
 
 
 def check_rate_limit_requirement() -> str:
-    chat_source = (APP_ROOT / "pages" / "chat.py").read_text(encoding="utf-8")
-    has_rate_limit = bool(
-        re.search(r"rate[_ -]?limit|throttl", chat_source, flags=re.IGNORECASE)
-    )
-    if not has_rate_limit:
-        raise CheckWarning(
-            "The project limits stored chat history, but a true per-session message-rate limiter "
-            "was not detected. NFR-8 should remain marked incomplete until throttling is implemented."
+    from core.rate_limiter import evaluate_message_rate
+
+    timestamps: tuple[float, ...] = ()
+    for moment in (100.0, 101.0, 102.0):
+        decision = evaluate_message_rate(
+            timestamps,
+            now=moment,
+            message_limit=3,
+            window_seconds=10,
         )
-    return "A per-session rate-limit/throttling implementation was detected."
+        if not decision.allowed:
+            raise AssertionError("A request inside the configured limit was blocked.")
+        timestamps = decision.timestamps
+
+    blocked = evaluate_message_rate(
+        timestamps,
+        now=103.0,
+        message_limit=3,
+        window_seconds=10,
+    )
+    if blocked.allowed or blocked.retry_after_seconds != 7:
+        raise AssertionError("The rolling-window limit did not block with the expected retry time.")
+    if len(blocked.timestamps) != 3:
+        raise AssertionError("A blocked request was incorrectly added to the session window.")
+
+    recovered = evaluate_message_rate(
+        blocked.timestamps,
+        now=110.1,
+        message_limit=3,
+        window_seconds=10,
+    )
+    if not recovered.allowed or recovered.remaining != 0:
+        raise AssertionError("The session did not recover when its oldest request expired.")
+
+    chat_source = (APP_ROOT / "pages" / "chat.py").read_text(encoding="utf-8")
+    if "_check_session_message_rate_limit" not in chat_source:
+        raise AssertionError("The chat submission handler does not enforce the limiter.")
+
+    return (
+        "Per-session rolling-window throttling passed allow, block, retry-time, "
+        "recovery, and chat-handler integration checks."
+    )
 
 
 def build_argument_parser() -> argparse.ArgumentParser:

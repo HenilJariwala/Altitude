@@ -6,7 +6,7 @@ from typing import Literal
 from core.text_matching import contains_phrase, normalize_text
 
 
-Platform = Literal["macos", "windows"]
+Platform = Literal["macos", "chromebook", "windows"]
 
 
 PLATFORM_ALIASES: dict[Platform, tuple[str, ...]] = {
@@ -19,6 +19,12 @@ PLATFORM_ALIASES: dict[Platform, tuple[str, ...]] = {
         "macos",
         "os x",
         "mac",
+    ),
+    "chromebook": (
+        "chromebook",
+        "chrome book",
+        "chromeos",
+        "chrome os",
     ),
     "windows": (
         "windows laptop",
@@ -36,6 +42,7 @@ PLATFORM_ALIASES: dict[Platform, tuple[str, ...]] = {
 
 PLATFORM_DISPLAY_NAMES: dict[Platform, str] = {
     "macos": "Mac",
+    "chromebook": "Chromebook",
     "windows": "Windows",
 }
 
@@ -101,7 +108,7 @@ def is_platform_only_reply(text: str) -> bool:
     """Recognize natural platform-only replies.
 
     Examples include ``Mac``, ``I am using a Mac``, and
-    ``Actually, this is Windows 11``. A message that also contains an
+    ``Actually, this is a Chromebook``. A message that also contains an
     issue, such as ``my Mac is frozen``, is not considered platform-only.
     """
 

@@ -10,3 +10,4 @@ python-frontmatter>=1.1,<2
 rapidfuzz>=3.9,<4
 numpy>=1.26.4,<3
 streamlit-cookies-controller==0.0.4
+ddgs>=9,<10

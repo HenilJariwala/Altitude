@@ -41,6 +41,15 @@ def get_expected_printer_step(
         history
     )
 
+    recent_user_printer_context = any(
+        any(
+            term in normalize_text(str(message.get("content", "")))
+            for term in ("printer", "printing", "print queue", "library printer", "learning commons")
+        )
+        for message in history[-10:]
+        if message.get("role") == "user"
+    )
+
     if any(
         marker in last_assistant
         for marker in (
@@ -64,12 +73,12 @@ def get_expected_printer_step(
     ):
         return "printer"
 
-    if any(
+    if recent_user_printer_context and any(
         marker in last_assistant
         for marker in (
-            "are you using a mac or a windows laptop",
-            "are you using a windows laptop or a mac",
-            "reply with mac or windows",
+            "are you using a mac or a chromebook",
+            "are you using a chromebook or a mac",
+            "reply with mac or chromebook",
         )
     ):
         return "device"
@@ -129,6 +138,14 @@ def has_explicit_printer_reference(
             "learning commons printer",
             "library printer",
             "library kyocera",
+            "print in library",
+            "print in the library",
+            "print at library",
+            "print at the library",
+            "print in learning commons",
+            "print at learning commons",
+            "print in libary",
+            "print at libary",
             "mz4001ci",
             "192.168.1.205",
             "192 168 1 205",
@@ -151,10 +168,18 @@ def detect_action(
         "cant print",
         "not printing",
         "nothing prints",
+        "nothing came out",
+        "did not come out",
+        "didn't come out",
+        "won't print",
+        "wont print",
+        "failed to print",
+        "fails to print",
         "print job",
         "printer unavailable",
         "printer is not responding",
         "offline",
+        "printer issue",
     )
 
     if any(
@@ -162,6 +187,50 @@ def detect_action(
         for phrase in troubleshoot_phrases
     ):
         return "troubleshoot"
+
+    if any(
+        phrase in normalized
+        for phrase in (
+            "won't show up in the list",
+            "won't even show up in the list",
+            "wont show up in the list",
+            "wont even show up in the list",
+            "doesn't show up in the list",
+            "does not show up in the list",
+            "not showing in the list",
+            "missing from the list",
+            "not in the printer list",
+        )
+    ):
+        return "add"
+
+    # A user who says they want/need to print in the Library or Learning
+    # Commons is asking to get that printer ready for use. Treat this as
+    # setup so Altitude can move directly to the device question instead
+    # of asking redundant printer/action clarifications.
+    library_location = any(
+        phrase in normalized
+        for phrase in (
+            "library",
+            "libary",
+            "learning commons",
+        )
+    )
+    new_print_intent = any(
+        phrase in normalized
+        for phrase in (
+            "i want to print",
+            "want to print",
+            "i need to print",
+            "need to print",
+            "how do i print",
+            "how can i print",
+            "how to print",
+        )
+    )
+
+    if library_location and new_print_intent:
+        return "add"
 
     add_words = {
         "add",
@@ -188,6 +257,20 @@ def detect_printer(
 ) -> str | None:
     normalized = normalize_text(text)
 
+    library_location = (
+        "library" in normalized
+        or "libary" in normalized
+        or "learning commons" in normalized
+    )
+    print_context = any(
+        term in normalized
+        for term in (
+            "print",
+            "printer",
+            "kyocera",
+        )
+    )
+
     if (
         any(
             term in normalized
@@ -201,10 +284,20 @@ def detect_printer(
                 "192 168 1 205",
             )
         )
+        or (library_location and print_context)
         or normalized in {
             "library",
+            "libary",
             "kyocera",
+            "it's the library one",
+            "its the library one",
+            "the library one",
+            "library one",
+            "for the library",
+            "no for the library",
+            "no, for the library",
         }
+        or (library_location and len(normalized.split()) <= 6 and normalized.startswith(("no ", "yes ", "for ", "the ")))
     ):
         return "learning_commons"
 
@@ -239,16 +332,22 @@ def detect_device(
     if platform == "macos":
         return "mac"
 
+    if platform == "chromebook":
+        return "chromebook"
+
     if platform == "windows":
-        return "windows"
+        return "unsupported_windows"
 
     normalized = normalize_text(text)
 
     if normalized in {"mc", "mack"}:
         return "mac"
 
+    if normalized in {"chrome book", "chromeos", "chrome os"}:
+        return "chromebook"
+
     if normalized in {"win", "window"}:
-        return "windows"
+        return "unsupported_windows"
 
     return None
 
@@ -360,6 +459,17 @@ def find_recent_printer(
     return None
 
 
+def find_recent_device(
+    history: list[dict[str, Any]],
+    current_question: str,
+) -> str | None:
+    for content in recent_user_messages(history, current_question):
+        value = detect_device(content)
+        if value:
+            return value
+    return None
+
+
 def valid_workflow_reply(
     question: str,
     expected_step: str | None,
@@ -457,26 +567,17 @@ def mac_setup_instructions() -> str:
     )
 
 
-def windows_setup_instructions() -> str:
+def chromebook_setup_instructions() -> str:
     return (
-        "Make sure your Windows laptop is connected "
-        "to either **SJK Wi-Fi** or "
-        "**Student Wi-Fi**.\n\n"
-        "1. Open **Settings → Bluetooth & devices "
-        "→ Printers & scanners**.\n"
-        "2. Click **Add device**.\n"
-        "3. If the printer does not appear, select "
-        "**Add manually**.\n"
-        "4. Choose **Add a printer using an IP "
-        "address or hostname**.\n"
-        "5. Set Device type to **TCP/IP Device**.\n"
-        f"6. Enter **{LEARNING_COMMONS_IP}**.\n"
-        "7. Allow Windows to detect the Kyocera "
-        "printer.\n"
-        "8. Complete setup and print a test page.\n\n"
-        "If administrator credentials or an "
-        "unapproved driver are requested, please "
-        "visit the IT Helpdesk."
+        "On a school-managed **Chromebook**, first check whether the printer "
+        "has already been deployed by IT.\n\n"
+        "1. Open **Settings**.\n"
+        "2. Search for **Print** or open **Device → Print and scan**.\n"
+        "3. Open **Printers** and look for the Learning Commons / Library printer.\n"
+        "4. If it is available, select it and print a test page.\n"
+        "5. If it is missing or locked by management, do not add an IP address or "
+        "driver manually. Contact the IT Helpdesk so the managed printer can be "
+        "assigned correctly."
     )
 
 
@@ -489,6 +590,7 @@ def route_printer_question(
         return PrinterDecision(handled=False)
 
     normalized = normalize_text(question)
+    effective_normalized = topic_context.effective_text
 
     if any(
         phrase in normalized
@@ -607,23 +709,98 @@ def route_printer_question(
             ),
         )
 
+    # Diagnose explicit printer symptoms before asking setup/location questions.
+    if any(phrase in normalized for phrase in ("print preview", "preview")) and any(
+        phrase in normalized for phrase in ("blank page", "blank pages", "shows blank", "preview is blank")
+    ):
+        return PrinterDecision(
+            handled=True,
+            answer=(
+                "Because the document has content but **Chrome's print preview is blank**, first test whether this is browser-specific: reload the page/document, then try printing or saving as PDF from the source app if available. "
+                "Also try another approved browser. If the same printer works from another app/browser, the printer itself is probably not the problem. Contact IT if Chrome preview stays blank for required school content."
+            ),
+        )
+
+    if any(phrase in normalized for phrase in ("sent the same", "five times", "multiple copies", "will it print", "duplicate print")) and "print" in normalized:
+        return PrinterDecision(
+            handled=True,
+            answer=(
+                "Yes, queued copies can print later when the printer reconnects. Open the printer's **Print Queue**, cancel the extra jobs, and leave only the copy you actually want. "
+                "If pages have already started printing, use the printer's normal Stop/Cancel control for your job; do not power-cycle a shared copier."
+            ),
+        )
+
+    if any(phrase in normalized for phrase in ("grey line", "gray line", "line down", "streak", "faint line", "smudged")) and "print" in normalized:
+        return PrinterDecision(
+            handled=True,
+            answer=(
+                "A repeated line/streak on every page usually points to toner/drum/fuser or another physical print-path issue. Print one simple test page to confirm the pattern. "
+                "If the same line appears again, stop troubleshooting from the computer and contact IT/copier support with the printer location and a sample page."
+            ),
+        )
+
+    if any(phrase in normalized for phrase in ("print in color", "print in colour", "color only", "colour only", "black and white only")):
+        return PrinterDecision(
+            handled=True,
+            answer=(
+                "If the printer supports colour, open the print dialog, expand **Show Details/More Settings**, and look for **Color/Colour**, **Quality**, or **Printer Features**. "
+                "Choose Colour instead of Black & White/Grayscale. If the option is missing or locked, Altitude should not guess the printer policy or install another driver; contact IT with the printer name/location."
+            ),
+        )
+
+    if any(phrase in normalized for phrase in ("from my phone", "from my iphone", "from my android", "mobile printing", "print directly from my phone")) and "print" in normalized:
+        return PrinterDecision(
+            handled=True,
+            answer=(
+                "Mobile printing is supported only if the school has an approved AirPrint/mobile-print workflow for that printer. Do not install unknown printer apps or drivers. "
+                "Tell me the printer name/location; if there is no approved mobile-print method for it, use a school-managed Mac/Chromebook or contact IT."
+            ),
+        )
+
+    if any(phrase in normalized for phrase in ("isn't showing up", "is not showing up", "not showing up", "can't find the printer", "cant find the printer")) and "printer" in normalized:
+        return PrinterDecision(
+            handled=True,
+            answer=(
+                "Confirm the Mac is on the approved school Wi-Fi, then open **System Settings → Printers & Scanners** and search for the exact printer name/location. "
+                "If it is a managed printer and still does not appear, contact IT rather than installing an unapproved driver or guessing an IP address."
+            ),
+        )
+
     expected_step = get_expected_printer_step(
         history
     )
 
     if is_printer_supply_request(question):
+        if "out of paper" in normalized and any(
+            term in normalized for term in ("but", "isn't", "is not", "not empty")
+        ):
+            return PrinterDecision(
+                handled=True,
+                answer=(
+                    "If the printer says **Out of Paper** even though paper is loaded:\n\n"
+                    "1. Remove and reseat the paper stack so it sits flat under the tray guides.\n"
+                    "2. Confirm the tray is fully closed.\n"
+                    "3. Check the printer display for the specific tray or paper size it is requesting.\n"
+                    "4. Make sure the selected paper size/type matches the loaded tray.\n"
+                    "5. Try one test page.\n\n"
+                    "If the warning remains, do not force the tray or sensors; contact the IT Helpdesk for service."
+                ),
+            )
         return PrinterDecision(
             handled=True,
             answer=(
-                "Printer paper and supply locations vary "
-                "by printer. Please contact the IT Helpdesk "
-                "or the staff member responsible for that area."
+                "Printer paper and supply locations vary by printer. Check the printer display "
+                "for the requested tray or supply, and contact the IT Helpdesk or the staff member "
+                "responsible for that area if the correct supply is not available."
             ),
         )
 
-    explicit = has_explicit_printer_reference(
-        question
+    explicit = has_explicit_printer_reference(question)
+    recent_printer_context = recent_printer_context or has_explicit_printer_reference(
+        effective_normalized
     )
+    current_device = detect_device(question)
+    current_action = detect_action(question)
 
     if (
         expected_step
@@ -660,20 +837,39 @@ def route_printer_question(
                 handled=True,
                 answer=(
                     "Please reply with **Mac** or "
-                    "**Windows**."
+                    "**Chromebook**."
                 ),
             )
 
+    context_sensitive_reply = (
+        recent_printer_context
+        and (
+            current_device is not None
+            or current_action is not None
+            or len(normalized.split()) <= 8
+            and any(
+                phrase in normalized
+                for phrase in (
+                    "offline",
+                    "not showing",
+                    "won't show",
+                    "won't even show",
+                    "wont show",
+                    "wont even show",
+                    "missing",
+                    "stuck",
+                    "still",
+                )
+            )
+        )
+    )
+
     if (
         not explicit
-        and not valid_workflow_reply(
-            question,
-            expected_step,
-        )
+        and not valid_workflow_reply(question, expected_step)
+        and not context_sensitive_reply
     ):
-        return PrinterDecision(
-            handled=False
-        )
+        return PrinterDecision(handled=False)
 
     failed = failure_follow_up(
         question,
@@ -733,6 +929,13 @@ def route_printer_question(
     action = detect_action(question)
     printer = detect_printer(question)
     device = detect_device(question)
+
+    if printer is None and recent_printer_context:
+        printer = find_recent_printer(history, question)
+    if action is None and recent_printer_context:
+        action = find_recent_action(history, question)
+    if device is None and recent_printer_context:
+        device = find_recent_device(history, question)
 
     if (
         expected_step == "action"
@@ -812,8 +1015,17 @@ def route_printer_question(
             return PrinterDecision(
                 handled=True,
                 answer=(
-                    "Are you using a **Mac** or a "
-                    "**Windows laptop**?"
+                    "Are you using a **Mac** or a **Chromebook**?"
+                ),
+            )
+
+        if device == "unsupported_windows":
+            return PrinterDecision(
+                handled=True,
+                answer=(
+                    "Windows devices are not part of the school's supported "
+                    "printing environment. Please contact the IT Helpdesk if this "
+                    "is a school-managed device."
                 ),
             )
 
@@ -822,7 +1034,23 @@ def route_printer_question(
             answer=(
                 mac_setup_instructions()
                 if device == "mac"
-                else windows_setup_instructions()
+                else chromebook_setup_instructions()
+            ),
+        )
+
+    if (
+        action == "troubleshoot"
+        and printer == "learning_commons"
+        and device == "mac"
+    ):
+        return PrinterDecision(
+            handled=True,
+            answer=(
+                "On your **Mac**, confirm you are on **SJK Wi-Fi** or **Student Wi-Fi**. "
+                "Then open **System Settings → Printers & Scanners** and check whether the "
+                "Learning Commons printer appears. If it appears, open its queue, resume it "
+                "if paused, remove only your failed job, and try a one-page test print. If the "
+                "printer is missing from the list, tell me that and I can give the setup steps."
             ),
         )
 

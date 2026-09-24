@@ -37,6 +37,7 @@ from core.knowledge_queue import sync_resolved_tickets_to_knowledge_queue
 from core.resolution_notifications import process_pending_resolution_notifications
 from core.platform_context import detect_platform
 from core.question_logger import redact_sensitive_information
+from core.rate_limiter import RateLimitDecision, evaluate_message_rate
 from core.time_utils import get_local_timezone, local_now
 from core.ticketing_client import (
     TicketPayload,
@@ -52,6 +53,8 @@ from ui.layout import STATIC_DIRECTORY, image_data_uri
 
 
 MAX_CHAT_MESSAGES = 80
+RATE_LIMIT_TIMESTAMPS_KEY = "chat_message_rate_limit_timestamps"
+RATE_LIMIT_NOTICE_KEY = "chat_message_rate_limit_notice"
 OPENING_MESSAGE = (
     "👋 Hi! I’m Altitude — your IT Support Assistant.\n\n"
     "How can I help you?"
@@ -564,6 +567,19 @@ def trim_chat_history() -> None:
     opening_message = messages[0]
     recent_messages = messages[-(MAX_CHAT_MESSAGES - 1) :]
     st.session_state.chat_messages = [opening_message, *recent_messages]
+
+
+def _check_session_message_rate_limit() -> RateLimitDecision:
+    """Check and update the rolling message window for this browser session."""
+    timestamps = st.session_state.get(RATE_LIMIT_TIMESTAMPS_KEY, ())
+    if not isinstance(timestamps, (list, tuple)):
+        timestamps = ()
+
+    decision = evaluate_message_rate(timestamps)
+    st.session_state[RATE_LIMIT_TIMESTAMPS_KEY] = list(
+        decision.timestamps
+    )
+    return decision
 
 
 def build_assistant_history() -> list[dict[str, str]]:
@@ -2545,16 +2561,21 @@ def display_message(
             display_student_avatar()
 
 
-def render_loading_animation(placeholder: Any) -> None:
-    """Render the local loading GIF or fallback dots."""
+def render_loading_animation(
+    placeholder: Any,
+    status_text: str = "ALTITUDE is thinking...",
+) -> None:
+    """Render the local loading GIF or fallback dots with temporary status text."""
+    safe_status_text = escape(status_text)
+
     if not LOADING_GIF_PATH.exists():
         placeholder.markdown(
-            """
+            f"""
 <div class="sjk-thinking-loader">
     <span></span>
     <span></span>
     <span></span>
-    <strong>ALTITUDE is thinking...</strong>
+    <strong>{safe_status_text}</strong>
 </div>
 """,
             unsafe_allow_html=True,
@@ -2571,7 +2592,7 @@ def render_loading_animation(placeholder: Any) -> None:
         src="data:image/gif;base64,{encoded_gif}"
         alt=""
     />
-    <strong></strong>
+    <strong>{safe_status_text}</strong>
 </div>
 """,
         unsafe_allow_html=True,
@@ -2619,6 +2640,11 @@ def display_streaming_assistant(
                     response_text = plan.direct_answer
                     st.markdown(response_text)
                 else:
+                    if plan.intent in {"web_fallback", "web_vendor_error"}:
+                        render_loading_animation(
+                            loading_placeholder,
+                            "ALTITUDE is researching your issue...",
+                        )
 
                     def response_with_loading():
                         first_chunk_received = False
@@ -3008,6 +3034,13 @@ def render_chat() -> None:
                 trim_chat_history()
                 st.rerun()
 
+        rate_limit_notice = st.session_state.pop(
+            RATE_LIMIT_NOTICE_KEY,
+            None,
+        )
+        if rate_limit_notice:
+            st.warning(str(rate_limit_notice))
+
         user_question = st.chat_input(
             "Describe your IT issue...",
             key="sjk_support_chat",
@@ -3019,6 +3052,16 @@ def render_chat() -> None:
 
         if not cleaned_question:
             return
+
+        rate_limit_decision = _check_session_message_rate_limit()
+        if not rate_limit_decision.allowed:
+            seconds = rate_limit_decision.retry_after_seconds
+            st.session_state[RATE_LIMIT_NOTICE_KEY] = (
+                "You have sent several messages in a short time. "
+                f"Please wait {seconds} second"
+                f"{'s' if seconds != 1 else ''} and try again."
+            )
+            st.rerun()
 
         detected_platform = detect_platform(cleaned_question)
 

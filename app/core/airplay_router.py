@@ -25,6 +25,14 @@ MAC_TERMS = (
 )
 
 
+CHROMEBOOK_TERMS = (
+    "chromebook",
+    "chrome book",
+    "chromeos",
+    "chrome os",
+)
+
+
 WINDOWS_TERMS = (
     "windows",
     "windows pc",
@@ -160,7 +168,7 @@ def is_computer_type_follow_up(
     Detect short corrections or answers such as:
     - Mac
     - I have a Mac
-    - Actually it is Windows
+    - Actually it is a Chromebook
     - I meant MacBook
     """
 
@@ -173,6 +181,9 @@ def is_computer_type_follow_up(
         "mac",
         "macbook",
         "mac book",
+        "chromebook",
+        "chrome book",
+        "chromeos",
         "windows",
         "windows pc",
         "pc",
@@ -180,10 +191,13 @@ def is_computer_type_follow_up(
         "i have a mac",
         "i have macbook",
         "i have a macbook",
+        "i have chromebook",
+        "i have a chromebook",
         "i have windows",
         "i have a windows pc",
         "actually mac",
         "actually a mac",
+        "actually chromebook",
         "actually windows",
         "it is mac",
         "it is a mac",
@@ -191,8 +205,10 @@ def is_computer_type_follow_up(
         "it's a mac",
         "i meant mac",
         "i meant macbook",
+        "i meant chromebook",
         "i meant windows",
         "sorry mac",
+        "sorry chromebook",
         "sorry windows",
     )
 
@@ -216,7 +232,7 @@ def waiting_for_airplay_device(
     assistant_asked_for_device = (
         "apple tv" in last_message
         and "mac" in last_message
-        and "windows" in last_message
+        and "chromebook" in last_message
     )
 
     return (
@@ -227,15 +243,18 @@ def waiting_for_airplay_device(
 def detect_computer_type(
     text: str,
 ) -> str | None:
-    """Detect whether the user has a Mac or Windows PC."""
+    """Detect the school device family used for screen sharing."""
 
     platform = detect_platform(text)
 
     if platform == "macos":
         return "mac"
 
+    if platform == "chromebook":
+        return "chromebook"
+
     if platform == "windows":
-        return "windows"
+        return "unsupported_windows"
 
     return None
 
@@ -252,7 +271,7 @@ def is_airplay_request(
         return False
 
     # Handle short follow-ups or corrections:
-    # "Mac", "I have a Mac", "Actually Windows", etc.
+    # "Mac", "I have a Mac", "Actually Chromebook", etc.
     if (
         is_computer_type_follow_up(question)
         and has_recent_airplay_context(history)
@@ -334,21 +353,21 @@ def build_mac_airplay_troubleshooting_answer() -> str:
     )
 
 
-def build_windows_apple_tv_answer() -> str:
+def build_chromebook_apple_tv_answer() -> str:
     return (
-        "A **Windows PC cannot natively AirPlay its full "
-        "screen to an Apple TV**.\n\n"
-        "Windows' built-in wireless-display feature uses "
-        "Miracast, while Apple TV receives AirPlay.\n\n"
-        "Use one of the school's approved alternatives:\n\n"
-        "1. Connect the Windows PC to the TV using an "
-        "approved HDMI cable and adapter.\n"
-        "2. Use the classroom's approved wireless "
-        "presentation system, if one is installed.\n"
-        "3. Ask the IT Helpdesk whether an approved "
-        "AirPlay-compatible Windows application is available.\n\n"
-        "Do not install random third-party AirPlay or "
-        "screen-mirroring software on a school device."
+        "A school-managed **Chromebook does not use AirPlay natively**.\n\n"
+        "If the classroom has an approved Google Cast or wireless-presentation "
+        "option, use that method instead. If the room only has an Apple TV, "
+        "contact the IT Helpdesk for the approved way to present from the "
+        "Chromebook. Do not install third-party mirroring extensions or apps."
+    )
+
+
+def build_unsupported_windows_airplay_answer() -> str:
+    return (
+        "Windows devices are not part of the school's supported classroom "
+        "presentation environment. Please contact the IT Helpdesk if this is a "
+        "school-managed device that needs to present to an Apple TV."
     )
 
 
@@ -374,10 +393,16 @@ def route_airplay_question(
         question
     )
 
-    if computer_type == "windows":
+    if computer_type == "unsupported_windows":
         return AirPlayDecision(
             handled=True,
-            answer=build_windows_apple_tv_answer(),
+            answer=build_unsupported_windows_airplay_answer(),
+        )
+
+    if computer_type == "chromebook":
+        return AirPlayDecision(
+            handled=True,
+            answer=build_chromebook_apple_tv_answer(),
         )
 
     if computer_type == "mac":
@@ -397,6 +422,6 @@ def route_airplay_question(
         handled=True,
         answer=(
             "Are you connecting to the Apple TV from a "
-            "**MacBook/Mac** or a **Windows PC**?"
+            "**MacBook/Mac** or a **Chromebook**?"
         ),
     )

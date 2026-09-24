@@ -69,13 +69,16 @@ def contains_wifi_topic(
 
     terms = (
         "wifi",
-        "wireless",
+        "wi-fi",
+        "wireless network",
+        "wireless connection",
         "school network",
         "guest network",
         "student network",
         "wifi qr",
         "network password",
         "internet connection",
+        "connect to the internet",
         "no internet",
     )
 
@@ -246,6 +249,55 @@ def route_wifi_question(
 
     normalized = normalize_text(question)
 
+    # Do not apply SJK Guest/Student QR-code flows to off-site networks or
+    # personal hotspots. Those questions need device/policy guidance instead.
+    offsite_markers = (
+        "museum", "hotel", "airport", "conference centre", "conference center",
+        "field trip", "off-site", "offsite", "away from school", "at home",
+        "home wifi", "home wi-fi", "personal hotspot", "iphone hotspot",
+    )
+    if any(marker in normalized for marker in offsite_markers):
+        return WifiDecision(handled=False)
+
+    # If another nearby device can see/use the network, troubleshoot the
+    # affected laptop instead of asking which school SSID the user wants.
+    if any(phrase in normalized for phrase in ("phone connects", "phone works", "my phone connects")) and any(
+        phrase in normalized
+        for phrase in ("laptop won't", "laptop wont", "laptop can't", "laptop cant", "laptop cannot", "mac won't", "macbook won't", "chromebook won't", "won't even see", "not in the list")
+    ):
+        return WifiDecision(
+            handled=True,
+            answer=(
+                "Since another nearby device can connect, focus on the laptop rather than the access point. "
+                "Turn Wi-Fi off and back on, restart the laptop, and check whether the school network appears. "
+                "If it still cannot see the network while other devices can, contact IT with the device and classroom location; do not change DNS/proxy settings or install profiles."
+            ),
+        )
+
+    # A question may mention Wi-Fi only as working context while the actual
+    # problem is elsewhere (for example certificate/privacy warnings). Do not
+    # let the Wi-Fi access flow hijack those requests.
+    non_wifi_failure_signals = (
+        "invalid security certificate",
+        "certificate warning",
+        "privacy warning",
+        "certificate error",
+        "connection is not private",
+        "your connection is not private",
+        "iphone hotspot",
+        "personal hotspot",
+        "wifi works fine",
+        "wi-fi works fine",
+        "wifi just fine",
+        "wi-fi just fine",
+        "connected to the wifi just fine",
+        "connected to wi-fi just fine",
+    )
+
+    if any(signal in normalized for signal in non_wifi_failure_signals):
+        if not detect_password_or_access_request(question):
+            return WifiDecision(handled=False)
+
     widespread_signals = (
         "nobody in my classroom",
         "everyone in my classroom",
@@ -254,6 +306,17 @@ def route_wifi_question(
         "multiple people",
         "all students",
         "whole classroom",
+        "half my class",
+        "half the class",
+        "several students",
+        "many students",
+        "every classroom",
+        "whole floor",
+        "second floor",
+        "building-wide",
+        "building wide",
+        "none of the chromebooks",
+        "all chromebooks",
     )
 
     if contains_wifi_topic(question) and any(

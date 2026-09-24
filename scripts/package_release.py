@@ -58,6 +58,14 @@ def _should_exclude(path: Path) -> bool:
         return True
 
     if relative_path.parts and relative_path.parts[0] == "data":
+        # All vector indexes and learned/runtime archives are regenerated or
+        # synchronized at deployment time and must not ship in a release.
+        if len(relative_path.parts) > 1 and relative_path.parts[1] in {
+            "chroma",
+            "learned_knowledge_archive",
+        }:
+            return True
+
         name = path.name.lower()
         if name.endswith(
             (

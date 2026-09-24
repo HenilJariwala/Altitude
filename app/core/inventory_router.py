@@ -17,7 +17,7 @@ from pydantic import (
 )
 from rapidfuzz import fuzz
 
-from core.text_matching import normalize_text
+from core.text_matching import contains_phrase, normalize_text
 
 from urllib3.exceptions import (
     InsecureRequestWarning,
@@ -155,6 +155,9 @@ ITEM_ALIASES: dict[
         "usb c block",
         "type c block",
         "usb c power block",
+        "usb c charging block",
+        "usb-c charging block",
+        "type c charging block",
     ),
     "usb-c adapter": (
         "usb c adapter",
@@ -194,9 +197,8 @@ ITEM_ALIASES: dict[
         "speakers",
     ),
     "extension": (
-        "extension",
-        "extension cable",
         "extension cord",
+        "extension cable",
     ),
     "usb-a lightning cable": (
         "usb a lightning cable",
@@ -223,6 +225,12 @@ ITEM_ALIASES: dict[
     "remote": (
         "remote",
         "remote control",
+    ),
+    "document scanner": (
+        "document scanner",
+        "document scanners",
+        "scanner",
+        "scanners",
     ),
     "apple stylus": (
         "apple stylus",
@@ -263,7 +271,7 @@ ITEM_ALIASES: dict[
 
 
 CANONICAL_REQUEST_ALIASES: dict[str, tuple[str, ...]] = {
-    "MacBook": ("macbook", "mackbook", "mac book", "apple laptop"),
+    "MacBook": ("macbook", "mackbook", "mac book", "apple laptop", "loaner mac"),
     "USB-C Charger": (
         "usb c charger",
         "usb-c charger",
@@ -277,7 +285,12 @@ CANONICAL_REQUEST_ALIASES: dict[str, tuple[str, ...]] = {
     ),
     "USB-C Cable": ("usb c cable", "usb-c cable", "type c cable"),
     "Chromebook": ("chromebook", "chrome book"),
+    "USB-C Block": ("usb c block", "usb-c block", "usb c charging block", "usb-c charging block"),
+    "HDMI Adapter": ("hdmi adapter", "hdmi dongle", "hdmi adaptor"),
     "iPad": ("ipad", "tablet"),
+    "Apple Stylus": ("apple pencil", "apple stylus", "stylus"),
+    "Document Camera": ("document camera", "document cameras"),
+    "Document Scanner": ("document scanner", "document scanners", "scanner"),
 }
 
 
@@ -365,6 +378,10 @@ UNCONDITIONAL_INVENTORY_PHRASES = (
     "in stock",
     "out of stock",
     "loaner",
+    "reserve",
+    "reservation",
+    "hold for me",
+    "hold one",
     "check inventory",
     "inventory check",
     "what can i borrow",
@@ -385,7 +402,6 @@ HARDWARE_REQUIRED_INVENTORY_PHRASES = (
     "available",
     "availability",
     "can i get",
-    "can i use",
 )
 
 
@@ -430,7 +446,8 @@ HARDWARE_TERMS = (
     "stylus",
     "pencil",
     "key card",
-    "extension",
+    "extension cord",
+    "extension cable",
     "speaker",
     "magsafe",
     "lightning",
@@ -438,11 +455,28 @@ HARDWARE_TERMS = (
     "equipment",
     "hardware",
     "device",
+    "scanner",
+    "scanners",
+    "document scanner",
+    "document scanners",
+    "document camera",
+    "document cameras",
 )
 
 
 TROUBLESHOOTING_PHRASES = (
     "not working",
+    "re-enroll",
+    "re-enrolled",
+    "needs to be enrolled",
+    "lost the charger",
+    "lost charger",
+    "returning",
+    "return it",
+    "wipe before returning",
+    "someone else's name",
+    "someone elses name",
+    "old apps installed",
     "does not work",
     "doesn't work",
     "not showing",
@@ -469,6 +503,12 @@ TROUBLESHOOTING_PHRASES = (
     "keeps disconnecting",
     "disconnecting",
     "stuck",
+    "snapped",
+    "broken off",
+    "stuck inside",
+    "mirroring",
+    "mirror to",
+    "screen is mirroring",
     "error",
     "issue",
     "problem",
@@ -537,7 +577,9 @@ ITEM_QUERY_NOISE = (
 
 ITEM_STOP_WORDS = {
     "a",
+    "also",
     "an",
+    "and",
     "any",
     "are",
     "do",
@@ -563,6 +605,77 @@ ITEM_STOP_WORDS = {
     "would",
     "you",
 }
+
+
+def contains_known_inventory_item(question: str) -> bool:
+    """Return whether the text names one of the supported inventory items."""
+
+    normalized = normalize_text(question)
+
+    for canonical_name, aliases in ITEM_ALIASES.items():
+        terms = (canonical_name, *aliases)
+        if any(normalize_text(term) in normalized for term in terms):
+            return True
+
+    return bool(requested_canonical_names(question))
+
+
+def recent_inventory_context(
+    history: list[dict[str, Any]],
+) -> bool:
+    """Detect whether the immediately recent conversation is about inventory."""
+
+    assistant_markers = (
+        "current live availability",
+        "currently available",
+        "inventory item",
+        "inventory items",
+        "which item would you like me to check",
+        "which one would you like me to check",
+        "which hardware item would you like me to check",
+        "cannot check live hardware availability",
+        "cannot check live",
+        "visit the it helpdesk to request one",
+    )
+
+    for message in reversed(history[-6:]):
+        content = normalize_text(str(message.get("content", "")))
+        if not content:
+            continue
+
+        if message.get("role") == "assistant" and any(
+            marker in content for marker in assistant_markers
+        ):
+            return True
+
+        if message.get("role") == "user":
+            if any(phrase in content for phrase in UNCONDITIONAL_INVENTORY_PHRASES):
+                return True
+            if has_hardware_term(content) and any(
+                phrase in content for phrase in HARDWARE_REQUIRED_INVENTORY_PHRASES
+            ):
+                return True
+
+    return False
+
+
+def is_short_inventory_addition(
+    question: str,
+    history: list[dict[str, Any]],
+) -> bool:
+    """Handle additions such as "and usb-c block" after an inventory check."""
+
+    normalized = normalize_text(question)
+
+    if not recent_inventory_context(history):
+        return False
+
+    if len(normalized.split()) > 8:
+        return False
+
+    starts_like_addition = normalized.startswith(("and ", "also ", "what about "))
+
+    return starts_like_addition and contains_known_inventory_item(question)
 
 
 def get_last_assistant_message(
@@ -602,7 +715,10 @@ def has_hardware_term(
 ) -> bool:
     normalized = normalize_text(question)
 
-    return any(term in normalized for term in HARDWARE_TERMS)
+    # Use phrase boundaries rather than substring checks. In particular, the
+    # inventory alias "block" must not match words such as "blocked" in a web
+    # filtering/security question.
+    return any(contains_phrase(normalized, term) for term in HARDWARE_TERMS)
 
 
 def is_hardware_troubleshooting_request(
@@ -667,11 +783,31 @@ def is_possible_item_request(
     if waiting_for_inventory_item(history):
         return len(normalized.split()) <= 10
 
+    if is_short_inventory_addition(question, history):
+        return True
+
     has_request_language = any(
         phrase in normalized for phrase in POSSIBLE_ITEM_REQUEST_PHRASES
     )
+    if not has_request_language or not has_hardware_term(question):
+        return False
 
-    return has_request_language and has_hardware_term(question)
+    # Generic phrases such as "I want" or "I need" are not enough to prove an
+    # inventory lookup. Require the request to be compact and item-oriented so
+    # "I want to see my notes on my MacBook" or "give me the bypass code" do
+    # not hijack the live inventory router.
+    if len(normalized.split()) > 9:
+        return False
+
+    task_markers = (
+        "connect", "mirror", "mirroring", "install", "fix", "repair",
+        "blocked", "bypass", "snapped", "stuck inside", "screen",
+        "not working", "won't", "wont", "cannot", "can't", "cant",
+    )
+    if any(marker in normalized for marker in task_markers):
+        return False
+
+    return True
 
 
 def is_inventory_request(
@@ -680,13 +816,30 @@ def is_inventory_request(
 ) -> bool:
     normalized = normalize_text(question)
 
-    if not normalized or is_hardware_troubleshooting_request(question):
+    if not normalized:
+        return False
+
+    explicit_loan_request = any(
+        phrase in normalized
+        for phrase in (
+            "loaner",
+            "can i borrow",
+            "could i borrow",
+            "may i borrow",
+            "need a loaner",
+            "need loaner",
+        )
+    )
+    if is_hardware_troubleshooting_request(question) and not explicit_loan_request:
         return False
 
     if is_inventory_list_request(question):
         return True
 
     if waiting_for_inventory_item(history):
+        return True
+
+    if is_short_inventory_addition(question, history):
         return True
 
     if any(phrase in normalized for phrase in UNCONDITIONAL_INVENTORY_PHRASES):
@@ -1002,21 +1155,45 @@ def route_inventory_question(
 ) -> InventoryDecision:
     normalized = normalize_text(question)
 
-    if any(
-        phrase in normalized
-        for phrase in (
-            "reserve a",
-            "reserve an",
-            "hold a macbook",
-            "save a macbook for me",
+    cart_reservation = (
+        "cart" in normalized
+        and any(term in normalized for term in ("laptop", "chromebook", "computer"))
+        and any(
+            phrase in normalized
+            for phrase in (
+                "reserve", "hold", "borrow", "need a cart", "need the cart",
+                "take the cart", "field trip", "for tomorrow", "for my class",
+            )
         )
-    ):
+    )
+    if cart_reservation:
         return InventoryDecision(
             handled=True,
             answer=(
-                "I can check live inventory, but I cannot reserve or hold an item. "
-                "Please visit or contact the IT Helpdesk to request a loaner. "
-                "Availability may change before pickup."
+                "Live inventory tracks individual loaner items, but Altitude cannot confirm or "
+                "reserve an entire cart for a class or field trip. Contact the IT Helpdesk with "
+                "the date, number of devices, and event/class purpose so availability can be confirmed."
+            ),
+        )
+
+    reservation_request = any(
+        phrase in normalized
+        for phrase in (
+            "reserve ",
+            "hold ",
+            "save a macbook for me",
+            "save a chromebook for me",
+            "put aside",
+        )
+    ) and any(term in normalized for term in ("macbook", "chromebook", "laptop", "loaner", "ipad"))
+
+    if reservation_request:
+        return InventoryDecision(
+            handled=True,
+            answer=(
+                "I can check live inventory, but I cannot reserve or hold devices for a future "
+                "date. Please contact the IT Helpdesk with the quantity, date, and class/event "
+                "purpose so the request can be confirmed. Availability may change before pickup."
             ),
         )
 
@@ -1033,7 +1210,11 @@ def route_inventory_question(
             effective_question = f"How many {recent_subject} are available?"
             normalized = normalize_text(effective_question)
 
-    if is_hardware_troubleshooting_request(effective_question):
+    explicit_loan_request = any(
+        phrase in normalized
+        for phrase in ("loaner", "can i borrow", "could i borrow", "may i borrow")
+    )
+    if is_hardware_troubleshooting_request(effective_question) and not explicit_loan_request:
         return InventoryDecision(handled=False)
 
     explicit_request = is_inventory_request(

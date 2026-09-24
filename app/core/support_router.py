@@ -37,23 +37,17 @@ CLOUD_AND_WEB_SERVICES = (
     "google calendar",
     "google forms",
     "gmail",
-    "sharepoint",
-    "microsoft 365",
-    "office 365",
+    "google chat",
 )
 
 DESKTOP_PRODUCTIVITY_APPS = (
-    "microsoft word",
-    "word",
-    "microsoft excel",
-    "excel",
-    "microsoft powerpoint",
-    "powerpoint",
-    "microsoft outlook",
-    "outlook",
-    "microsoft teams",
-    "teams",
-    "onedrive",
+    "adobe acrobat",
+    "acrobat",
+    "adobe creative cloud",
+    "creative cloud",
+    "zoom",
+    "chrome",
+    "safari",
 )
 
 DEVICE_COMPONENTS = (
@@ -279,7 +273,7 @@ def needs_operating_system(
     text: str,
 ) -> bool:
     """
-    Ask Mac or Windows only when the issue is genuinely
+    Ask for the school device platform only when the issue is genuinely
     device or desktop-application dependent.
     """
 
@@ -331,6 +325,31 @@ def is_google_password_request(
     text: str,
 ) -> bool:
     normalized = normalize_text(text)
+
+    # A third-party application can use a school Google identity without the
+    # problem being a Google-password problem. Do not turn "I can't sign into
+    # Zoom with my school account" into a password reset unless Google/Gmail/
+    # Workspace itself is explicitly named.
+    third_party_auth = any(
+        term in normalized
+        for term in (
+            "zoom",
+            "adobe",
+            "creative cloud",
+            "photoshop",
+        )
+    )
+    explicit_google = any(
+        term in normalized
+        for term in (
+            "google",
+            "gmail",
+            "google workspace",
+            "workspace account",
+        )
+    )
+    if third_party_auth and not explicit_google:
+        return False
 
     account_context = any(
         term in normalized
@@ -488,7 +507,46 @@ def route_security_or_account_question(
             ),
         )
 
-    credential_request = "password" in normalized and any(
+    admin_install_request = (
+        any(
+            phrase in normalized
+            for phrase in (
+                "administrator password",
+                "admin password",
+                "administrator credentials",
+                "admin credentials",
+                "administrator name and password",
+                "admin name and password",
+            )
+        )
+        and any(
+            phrase in normalized
+            for phrase in (
+                "install",
+                "installer",
+                "program",
+                "software",
+                "application",
+                "app",
+            )
+        )
+    )
+
+    if admin_install_request:
+        return SupportPreparation(
+            handled=True,
+            answer=(
+                "The administrator prompt means this installation requires approved "
+                "IT credentials or an approved software-deployment method. Do not try "
+                "to bypass the prompt or use someone else's administrator account. "
+                "Check Self Service or the school's approved software catalogue if one "
+                "is available. If the required program is not there, "
+                "contact the IT Helpdesk with the program name and class requirement so "
+                "IT can install or approve it."
+            ),
+        )
+
+    reveal_request = any(
         phrase in normalized
         for phrase in (
             "what is the",
@@ -496,12 +554,33 @@ def route_security_or_account_question(
             "give me",
             "reveal",
             "tell me the",
-            "another student's",
-            "another students",
+            "send me the",
+        )
+    )
+
+    sensitive_password_target = any(
+        phrase in normalized
+        for phrase in (
             "administrator password",
             "admin password",
+            "wifi password",
             "wifi admin password",
             "network password",
+            "another student's password",
+            "another students password",
+            "someone else's password",
+            "someone elses password",
+        )
+    )
+
+    credential_request = (
+        "password" in normalized
+        and (
+            (reveal_request and sensitive_password_target)
+            or "another student's password" in normalized
+            or "another students password" in normalized
+            or "someone else's password" in normalized
+            or "someone elses password" in normalized
         )
     )
 
@@ -521,9 +600,9 @@ def route_security_or_account_question(
         return SupportPreparation(
             handled=True,
             answer=(
-                "I cannot provide, reveal, or access passwords or another person's "
-                "account credentials. Passwords are private. The account owner must "
-                "use the approved reset process or contact the IT Helpdesk."
+                "Passwords and administrative credentials cannot be revealed or "
+                "provided through Altitude. Use the approved reset, Wi-Fi access, or "
+                "IT support process for the account or device involved."
             ),
         )
 
@@ -881,8 +960,8 @@ def prepare_support_question(
             answer=(
                 "Please provide two details so I can give the "
                 "correct troubleshooting steps:\n\n"
-                "1. Are you using a **Mac** or a "
-                "**Windows device**?\n"
+                "1. Are you using a **Mac** or a **Chromebook**? If you are using "
+                "another school device, tell me which one.\n"
                 "2. What exactly is happening? For example, "
                 "it will not turn on, it is frozen, it has no "
                 "sound, it is not charging, or a device is "
@@ -893,7 +972,10 @@ def prepare_support_question(
     if needs_operating_system(question):
         return SupportPreparation(
             handled=True,
-            answer=("Are you using a **Mac** or a **Windows device**?"),
+            answer=(
+                "Are you using a **Mac** or a **Chromebook**? If you are using "
+                "another school device, tell me which one."
+            ),
         )
 
     return SupportPreparation(retrieval_question=question)

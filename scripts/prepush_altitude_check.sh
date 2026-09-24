@@ -74,6 +74,19 @@ else
 fi
 
 echo
+echo '[8] Task-aware routing regression'
+if [ -f scripts/test_task_aware_routing_v11.py ]; then
+  if PYTHONPATH=app python scripts/test_task_aware_routing_v11.py; then
+    echo 'PASS: task-aware routing regression.'
+  else
+    echo 'FAIL: task-aware routing regression.'
+    FAIL=1
+  fi
+else
+  echo 'SKIP: scripts/test_task_aware_routing_v11.py not found.'
+fi
+
+echo
 echo '============================================================'
 if [ "$FAIL" -eq 0 ]; then
   echo 'PRE-PUSH RESULT: PASS'
