@@ -39,6 +39,8 @@ from core.analytics_db import (
     get_feedback_filter_options,
     get_feedback_summary,
     get_knowledge_queue_summary,
+    get_pilot_participants,
+    get_pilot_summary,
     get_recent_knowledge_gaps,
     get_security_summary,
     get_ticket_summary,
@@ -47,6 +49,7 @@ from core.analytics_db import (
     list_announcements,
     list_feedback_records,
     list_knowledge_drafts,
+    list_pilot_questions,
     list_security_findings,
     list_ticket_audits,
     record_ticket_status_sync_error,
@@ -54,6 +57,11 @@ from core.analytics_db import (
     update_announcement,
     update_knowledge_draft,
     update_security_finding_review,
+)
+from core.app_logging import (
+    get_important_log_path,
+    get_logger,
+    read_important_log_lines,
 )
 from core.knowledge_queue import (
     publish_knowledge_draft,
@@ -74,9 +82,11 @@ LOGIN_LOCK_SECONDS = 30
 ADMIN_SESSION_COOKIE = "sjk_altitude_admin_session"
 ADMIN_SESSION_LIFETIME = timedelta(days=7)
 ADMIN_SESSION_SECRET_FILE = PROJECT_ROOT / "data" / ".admin_session_secret"
+LOGGER = get_logger("admin")
 
 ADMIN_SECTIONS: tuple[tuple[str, str], ...] = (
     ("Overview", "overview"),
+    ("Faculty Pilot", "pilot"),
     ("Feedback", "feedback"),
     ("Tickets", "tickets"),
     ("Security", "security"),
@@ -89,6 +99,10 @@ SECTION_DESCRIPTIONS: dict[str, str] = {
     "overview": (
         "Monitor support activity, user feedback, ticket volume and the "
         "knowledge-review pipeline."
+    ),
+    "pilot": (
+        "Review named pilot participation, questions, responses, feedback and "
+        "important application warnings or errors."
     ),
     "feedback": (
         "Review satisfaction results and identify responses that may need "
@@ -1275,6 +1289,263 @@ def _render_feedback_section() -> None:
                 ),
             },
         )
+
+
+def _csv_download_bytes(frame: pd.DataFrame) -> bytes:
+    """Create an Excel-safe UTF-8 CSV from user-controlled pilot content."""
+    safe_frame = frame.copy()
+
+    def _safe_cell(value: Any) -> Any:
+        if not isinstance(value, str):
+            return value
+        stripped = value.lstrip()
+        if stripped.startswith(("=", "+", "-", "@")):
+            return "'" + value
+        return value
+
+    for column in safe_frame.columns:
+        safe_frame[column] = safe_frame[column].map(_safe_cell)
+    return safe_frame.to_csv(index=False).encode("utf-8-sig")
+
+
+def _render_pilot_section() -> None:
+    """Render searchable faculty pilot activity and important runtime logs."""
+    try:
+        initialize_database()
+        summary = get_pilot_summary()
+        participants = get_pilot_participants()
+    except Exception as error:
+        LOGGER.exception(
+            "Pilot summary failed: %s: %s",
+            type(error).__name__,
+            error,
+        )
+        summary = {
+            "participants": 0,
+            "conversations": 0,
+            "questions": 0,
+            "feedback_votes": 0,
+            "not_helpful_votes": 0,
+            "feedback_coverage": 0.0,
+        }
+        participants = []
+        st.error("Faculty pilot activity could not be loaded.")
+
+    st.html(
+        "".join(
+            (
+                '<div class="sjk-admin-metric-grid">',
+                _metric_card(
+                    "Participants",
+                    f"{int(summary.get('participants', 0)):,}",
+                    f"{int(summary.get('conversations', 0)):,} pilot conversations",
+                    tone="green",
+                ),
+                _metric_card(
+                    "Questions",
+                    f"{int(summary.get('questions', 0)):,}",
+                    "Saved faculty questions",
+                ),
+                _metric_card(
+                    "Feedback",
+                    f"{int(summary.get('feedback_votes', 0)):,}",
+                    f"{float(summary.get('feedback_coverage', 0.0)):.1f}% coverage",
+                    tone="purple",
+                ),
+                _metric_card(
+                    "Not Helpful",
+                    f"{int(summary.get('not_helpful_votes', 0)):,}",
+                    "Responses to review",
+                    tone="red",
+                ),
+                "</div>",
+            )
+        )
+    )
+
+    with st.container(key="admin_pilot_filters", border=False):
+        st.html(
+            """
+<div class="sjk-admin-feedback-heading">
+    <div>
+        <span>Pilot records</span>
+        <h2>Faculty Questions and Feedback</h2>
+        <p>Filter named participant questions and export the current results.</p>
+    </div>
+</div>
+"""
+        )
+        search_column, participant_column, feedback_column = st.columns(
+            [2.0, 1.15, 1.0],
+            gap="small",
+        )
+        with search_column:
+            search_value = st.text_input(
+                "Search",
+                key="admin_pilot_search",
+                placeholder="Search names, questions, answers or comments",
+            )
+        with participant_column:
+            participant_value = st.selectbox(
+                "Participant",
+                options=("All", *participants),
+                key="admin_pilot_participant",
+            )
+        with feedback_column:
+            feedback_value = st.selectbox(
+                "Feedback",
+                options=("All", "Helpful", "Not Helpful", "No Feedback"),
+                key="admin_pilot_feedback",
+            )
+
+    feedback_filter = {
+        "Helpful": "helpful",
+        "Not Helpful": "not_helpful",
+        "No Feedback": "no_feedback",
+    }.get(feedback_value)
+
+    try:
+        records = list_pilot_questions(
+            participant_name=(
+                None if participant_value == "All" else participant_value
+            ),
+            feedback_status=feedback_filter,
+            search=search_value,
+            limit=10_000,
+        )
+    except Exception as error:
+        LOGGER.exception(
+            "Pilot question load failed: %s: %s",
+            type(error).__name__,
+            error,
+        )
+        records = []
+        st.error("Pilot questions could not be loaded from the database.")
+
+    table_rows: list[dict[str, Any]] = []
+    for record in records:
+        helpful = record.get("helpful")
+        if helpful is None:
+            feedback_label = "Not submitted"
+        elif bool(helpful):
+            feedback_label = "Helpful"
+        else:
+            feedback_label = "Not Helpful"
+        table_rows.append(
+            {
+                "Asked": _format_feedback_datetime(
+                    str(record.get("asked_at") or "")
+                ),
+                "Participant": str(
+                    record.get("participant_name") or "Not recorded"
+                ),
+                "Question": str(record.get("question") or ""),
+                "Altitude answer": str(
+                    record.get("answer") or "No answer recorded"
+                ),
+                "Route": str(record.get("route") or "Not recorded"),
+                "Platform": str(record.get("platform") or "Not recorded"),
+                "Feedback": feedback_label,
+                "Reason": str(record.get("feedback_reason") or ""),
+                "Comment": str(record.get("feedback_comment") or ""),
+            }
+        )
+
+    question_frame = pd.DataFrame(
+        table_rows,
+        columns=(
+            "Asked",
+            "Participant",
+            "Question",
+            "Altitude answer",
+            "Route",
+            "Platform",
+            "Feedback",
+            "Reason",
+            "Comment",
+        ),
+    )
+
+    with st.container(key="admin_pilot_question_table", border=False):
+        count_column, download_column = st.columns(
+            [1.0, 0.28],
+            gap="small",
+            vertical_alignment="center",
+        )
+        with count_column:
+            st.caption(
+                f"Showing {len(question_frame):,} pilot "
+                + ("question" if len(question_frame) == 1 else "questions")
+            )
+        with download_column:
+            st.download_button(
+                "Download CSV",
+                data=_csv_download_bytes(question_frame),
+                file_name="altitude-faculty-pilot-questions.csv",
+                mime="text/csv",
+                width="stretch",
+                disabled=question_frame.empty,
+            )
+
+        if question_frame.empty:
+            st.info("No pilot questions match the selected filters.")
+        else:
+            st.dataframe(
+                question_frame,
+                hide_index=True,
+                width="stretch",
+                height=460,
+                column_config={
+                    "Asked": st.column_config.TextColumn(width="medium"),
+                    "Participant": st.column_config.TextColumn(width="medium"),
+                    "Question": st.column_config.TextColumn(width="large"),
+                    "Altitude answer": st.column_config.TextColumn(width="large"),
+                    "Route": st.column_config.TextColumn(width="small"),
+                    "Platform": st.column_config.TextColumn(width="small"),
+                    "Feedback": st.column_config.TextColumn(width="small"),
+                    "Reason": st.column_config.TextColumn(width="medium"),
+                    "Comment": st.column_config.TextColumn(width="medium"),
+                },
+            )
+
+    st.divider()
+    st.subheader("Important application log")
+    st.caption(
+        "Only warnings and errors are retained. The file rotates automatically "
+        "to prevent unlimited growth."
+    )
+    log_search_column, log_level_column = st.columns([2.0, 1.0], gap="small")
+    with log_search_column:
+        log_search = st.text_input(
+            "Search log",
+            key="admin_pilot_log_search",
+            placeholder="Search warnings and errors",
+        )
+    with log_level_column:
+        log_level = st.selectbox(
+            "Level",
+            options=("All", "Warning", "Error"),
+            key="admin_pilot_log_level",
+        )
+
+    log_lines = read_important_log_lines(
+        level=None if log_level == "All" else log_level,
+        search=log_search,
+        limit=500,
+    )
+    log_text = "\n".join(log_lines)
+    log_path = get_important_log_path()
+    st.caption(f"Saved at: {log_path}")
+    if log_lines:
+        st.code(log_text, language="text")
+        st.download_button(
+            "Download filtered log",
+            data=(log_text + "\n").encode("utf-8"),
+            file_name="altitude-important-log.txt",
+            mime="text/plain",
+        )
+    else:
+        st.info("No important log entries match the selected filters.")
 
 
 def _render_tickets_section() -> None:
@@ -3127,6 +3398,7 @@ def _render_health_section() -> None:
 
 SECTION_RENDERERS: dict[str, Callable[[], None]] = {
     "overview": _render_overview,
+    "pilot": _render_pilot_section,
     "feedback": _render_feedback_section,
     "tickets": _render_tickets_section,
     "security": _render_security_section,

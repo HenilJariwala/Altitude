@@ -79,3 +79,21 @@ Clear the stuck print jobs, restart the Windows Print Spooler, and re-add the ap
 
 **Escalation:**
 If the print queue cannot be cleared, the Print Spooler cannot be restarted without administrator access, or printing still fails after the approved steps, contact the IT Helpdesk.
+
+## Topic: Altitude: help me create IT ticket
+**Intent Keywords:** altitude: help me create it ticket, altitude, help, create, ticket, other, provided
+**Target Audience:** Staff, Faculty, Students
+
+**Bot Instruction:** Use this procedure only when the user's symptoms match this resolved issue. Do not invent missing steps, credentials, permissions, or administrator actions.
+
+**Use this procedure when:**
+Altitude: help me create IT ticket
+
+**Direct Answer:**
+Create ticket
+
+**Troubleshooting Steps:**
+1. No comments have been added to this ticket yet.
+
+**Escalation:**
+If these approved steps do not resolve the issue, contact the IT Helpdesk.

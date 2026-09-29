@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from core.text_matching import contains_any_phrase, contains_phrase, normalize_text
+from core.conversation_context import build_contextual_query, find_recent_user_issue, is_contextual_follow_up
 
 
 # Central topic vocabulary used only for routing/disambiguation.  The goal is
@@ -171,7 +172,19 @@ def _extract_negated_topics(text: str) -> set[str]:
     blocked: set[str] = set()
 
     for topic, aliases in TOPIC_ALIASES.items():
-        if any(_has_negation_pattern(text, alias) for alias in aliases):
+        # "not printing" describes a printer failure; it does not mean the
+        # user is rejecting the printer topic. Keep the routing negation
+        # logic for noun/topic corrections such as "not the printer".
+        negation_aliases = aliases
+        if topic == "printer":
+            negation_aliases = tuple(
+                alias for alias in aliases if alias != "printing"
+            )
+
+        if any(
+            _has_negation_pattern(text, alias)
+            for alias in negation_aliases
+        ):
             blocked.add(topic)
 
     for shorthand, topics in NEGATION_SHORTHANDS.items():
@@ -253,9 +266,14 @@ def build_topic_context(
         or any(marker in current for marker in CORRECTION_MARKERS)
     )
 
-    prior_issue = _recent_user_issue(history, question) if is_correction else ""
+    contextual_follow_up = is_contextual_follow_up(question, history)
+    prior_issue = ""
+    if is_correction or contextual_follow_up:
+        prior_issue = find_recent_user_issue(history, question) or _recent_user_issue(history, question)
 
-    if prior_issue:
+    if contextual_follow_up and history:
+        effective = build_contextual_query(question, history)
+    elif prior_issue:
         effective = f"{prior_issue} {question}".strip()
     else:
         effective = question
@@ -270,16 +288,13 @@ def build_topic_context(
             "Do not interpret as: " + ", ".join(sorted(negated)) + "."
         )
 
-    if prior_issue and clarification_lines:
-        retrieval = (
-            f"Original issue: {prior_issue}\n"
-            f"User clarification: {question}\n"
-            + " ".join(clarification_lines)
-        )
-    elif clarification_lines:
-        retrieval = f"{question}\n" + " ".join(clarification_lines)
+    if is_correction and prior_issue:
+        retrieval = f"Original issue: {prior_issue}\nCorrection: {question}"
     else:
-        retrieval = question
+        retrieval = effective
+
+    if clarification_lines:
+        retrieval = retrieval + "\n" + " ".join(clarification_lines)
 
     return TopicContext(
         current_text=current,

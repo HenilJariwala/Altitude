@@ -27,16 +27,26 @@ from core.analytics_db import (
     mark_ticket_submission_failed,
     mark_ticket_submitted,
     record_ticket_status_sync_error,
+    register_pilot_participant,
     save_feedback,
     save_message,
 )
+from core.app_logging import get_logger
 from core.assistant import prepare_answer, stream_answer
 from core.escalation_router import user_requests_escalation as _core_user_requests_escalation
 from core.feedback_policy import is_feedback_eligible_response as _core_feedback_eligible
 from core.knowledge_queue import sync_resolved_tickets_to_knowledge_queue
 from core.resolution_notifications import process_pending_resolution_notifications
 from core.platform_context import detect_platform
+from core.pilot import (
+    get_pilot_label,
+    is_pilot_mode_enabled,
+    is_pilot_name_required,
+    is_pilot_ticket_submission_disabled,
+    normalize_participant_name,
+)
 from core.question_logger import redact_sensitive_information
+from core.rate_limiter import RateLimitDecision, evaluate_message_rate
 from core.time_utils import get_local_timezone, local_now
 from core.ticketing_client import (
     TicketPayload,
@@ -52,10 +62,14 @@ from ui.layout import STATIC_DIRECTORY, image_data_uri
 
 
 MAX_CHAT_MESSAGES = 80
+RATE_LIMIT_TIMESTAMPS_KEY = "chat_message_rate_limit_timestamps"
+RATE_LIMIT_NOTICE_KEY = "chat_message_rate_limit_notice"
 OPENING_MESSAGE = (
     "👋 Hi! I’m Altitude — your IT Support Assistant.\n\n"
     "How can I help you?"
 )
+
+LOGGER = get_logger("chat")
 
 LOADING_GIF_PATH = (
     Path(__file__).resolve().parents[1]
@@ -225,9 +239,11 @@ SECURITY_MISUSE_RULES: tuple[tuple[str, str, str, tuple[str, ...]], ...] = (
 
 def _print_analytics_error(action: str, error: Exception) -> None:
     """Log an analytics failure without breaking the support chat."""
-    print(
-        f"Analytics {action} failed: "
-        f"{type(error).__name__}: {error}"
+    LOGGER.error(
+        "Analytics %s failed: %s: %s",
+        action,
+        type(error).__name__,
+        error,
     )
 
 
@@ -269,7 +285,11 @@ def _ensure_conversation_record() -> bool:
     session_id = _ensure_session_id()
 
     try:
-        create_conversation(session_id)
+        create_conversation(
+            session_id,
+            participant_name=st.session_state.get("pilot_participant_name"),
+            pilot_mode=is_pilot_mode_enabled(),
+        )
     except Exception as error:
         _print_analytics_error("conversation creation", error)
         return False
@@ -564,6 +584,19 @@ def trim_chat_history() -> None:
     opening_message = messages[0]
     recent_messages = messages[-(MAX_CHAT_MESSAGES - 1) :]
     st.session_state.chat_messages = [opening_message, *recent_messages]
+
+
+def _check_session_message_rate_limit() -> RateLimitDecision:
+    """Check and update the rolling message window for this browser session."""
+    timestamps = st.session_state.get(RATE_LIMIT_TIMESTAMPS_KEY, ())
+    if not isinstance(timestamps, (list, tuple)):
+        timestamps = ()
+
+    decision = evaluate_message_rate(timestamps)
+    st.session_state[RATE_LIMIT_TIMESTAMPS_KEY] = list(
+        decision.timestamps
+    )
+    return decision
 
 
 def build_assistant_history() -> list[dict[str, str]]:
@@ -1059,9 +1092,10 @@ def _ticket_status_query_answer(text: str) -> str | None:
             "\n\nI could not refresh the ticketing dashboard right now, so I am "
             "showing the last status saved by Altitude."
         )
-        print(
-            "Ticket status lookup failed: "
-            f"{type(error).__name__}: {error}"
+        LOGGER.exception(
+            "Ticket status lookup failed: %s: %s",
+            type(error).__name__,
+            error,
         )
 
     status = str(row.get("status") or "Submitted").strip() or "Submitted"
@@ -1850,6 +1884,16 @@ def _render_ticket_review_step(
     else:
         st.caption("No optional details will be included.")
 
+    pilot_ticket_disabled = (
+        is_pilot_mode_enabled()
+        and is_pilot_ticket_submission_disabled()
+    )
+    if pilot_ticket_disabled:
+        st.info(
+            "Faculty Pilot mode is active. You can review the generated "
+            "ticket details, but no real ticket will be submitted."
+        )
+
     create_column, edit_column, cancel_column = st.columns(
         [1.25, 1.0, 0.85],
         gap="small",
@@ -1860,6 +1904,12 @@ def _render_ticket_review_step(
             key=f"confirm_create_ticket_{message_id}",
             type="primary",
             width="stretch",
+            disabled=pilot_ticket_disabled,
+            help=(
+                "Real ticket submission is disabled during the faculty pilot."
+                if pilot_ticket_disabled
+                else None
+            ),
         )
     with edit_column:
         edit_requested = st.button(
@@ -1939,9 +1989,10 @@ def _render_ticket_review_step(
             )
         except Exception as audit_error:
             _print_analytics_error("ticket failure update", audit_error)
-        print(
-            "Ticket submission failed: "
-            f"{type(error).__name__}: {error}"
+        LOGGER.exception(
+            "Ticket submission failed: %s: %s",
+            type(error).__name__,
+            error,
         )
         st.error("The ticketing system could not create the ticket.")
         return
@@ -2545,16 +2596,21 @@ def display_message(
             display_student_avatar()
 
 
-def render_loading_animation(placeholder: Any) -> None:
-    """Render the local loading GIF or fallback dots."""
+def render_loading_animation(
+    placeholder: Any,
+    status_text: str = "ALTITUDE is thinking...",
+) -> None:
+    """Render the local loading GIF or fallback dots with temporary status text."""
+    safe_status_text = escape(status_text)
+
     if not LOADING_GIF_PATH.exists():
         placeholder.markdown(
-            """
+            f"""
 <div class="sjk-thinking-loader">
     <span></span>
     <span></span>
     <span></span>
-    <strong>ALTITUDE is thinking...</strong>
+    <strong>{safe_status_text}</strong>
 </div>
 """,
             unsafe_allow_html=True,
@@ -2571,7 +2627,7 @@ def render_loading_animation(placeholder: Any) -> None:
         src="data:image/gif;base64,{encoded_gif}"
         alt=""
     />
-    <strong></strong>
+    <strong>{safe_status_text}</strong>
 </div>
 """,
         unsafe_allow_html=True,
@@ -2619,6 +2675,11 @@ def display_streaming_assistant(
                     response_text = plan.direct_answer
                     st.markdown(response_text)
                 else:
+                    if plan.intent in {"web_fallback", "web_vendor_error"}:
+                        render_loading_animation(
+                            loading_placeholder,
+                            "ALTITUDE is researching your issue...",
+                        )
 
                     def response_with_loading():
                         first_chunk_received = False
@@ -2646,9 +2707,10 @@ def display_streaming_assistant(
                 had_error = True
                 loading_placeholder.empty()
 
-                print(
-                    "Chat response error: "
-                    f"{type(error).__name__}: {error}"
+                LOGGER.exception(
+                    "Chat response error: %s: %s",
+                    type(error).__name__,
+                    error,
                 )
 
                 response_text = (
@@ -2671,7 +2733,7 @@ def display_streaming_assistant(
                     st.error(
                         "The requested support resource could not be found."
                     )
-                    print("Missing support resource:", resource_path)
+                    LOGGER.error("Missing support resource: %s", resource_path)
 
             scroll_chat_to_bottom()
 
@@ -2736,9 +2798,10 @@ def display_ticket_status_assistant(
                 )
             except Exception as error:
                 had_error = True
-                print(
-                    "Ticket status response error: "
-                    f"{type(error).__name__}: {error}"
+                LOGGER.exception(
+                    "Ticket status response error: %s: %s",
+                    type(error).__name__,
+                    error,
                 )
                 response_text = (
                     "I could not check that ticket status right now. "
@@ -2853,9 +2916,100 @@ def scroll_chat_to_bottom() -> None:
 # ---------------------------------------------------------------------------
 
 
+def _render_pilot_registration() -> bool:
+    """Collect one disclosed participant name before starting pilot chat."""
+    if not is_pilot_mode_enabled():
+        return True
+
+    saved_name = str(
+        st.session_state.get("pilot_participant_name", "")
+    ).strip()
+    if saved_name or not is_pilot_name_required():
+        return True
+
+    label = get_pilot_label()
+    ticket_notice = (
+        "Real ticket submission is disabled."
+        if is_pilot_ticket_submission_disabled()
+        else "Ticket submission is enabled for this pilot."
+    )
+    with st.container(key="pilot_registration", border=True):
+        st.subheader(label)
+        st.write(
+            "Enter your name before testing Altitude. Your name, questions, "
+            "Altitude's responses, and submitted feedback will be saved for "
+            "the IT team to review during this pilot."
+        )
+        st.caption(
+            "Do not enter passwords, private student information, or other "
+            f"sensitive information. {ticket_notice}"
+        )
+
+        with st.form("pilot_registration_form", clear_on_submit=False):
+            entered_name = st.text_input(
+                "Your name",
+                placeholder="First and last name",
+                max_chars=100,
+            )
+            acknowledged = st.checkbox(
+                "I understand that my pilot questions and feedback will be saved."
+            )
+            submitted = st.form_submit_button(
+                "Start testing Altitude",
+                type="primary",
+                width="stretch",
+            )
+
+        if submitted:
+            if not acknowledged:
+                st.error("Confirm the pilot data notice before continuing.")
+                return False
+            try:
+                participant_name = normalize_participant_name(entered_name)
+                if not _ensure_analytics_database():
+                    raise RuntimeError("The pilot database is unavailable.")
+                register_pilot_participant(
+                    _ensure_session_id(),
+                    participant_name,
+                )
+            except (ValueError, RuntimeError) as error:
+                st.error(str(error))
+                return False
+            except Exception as error:
+                _print_analytics_error("pilot registration", error)
+                st.error("Your pilot session could not be started. Try again.")
+                return False
+
+            st.session_state.pilot_participant_name = participant_name
+            st.rerun()
+
+    return False
+
+
+def _render_pilot_banner() -> None:
+    """Identify the testing environment and its data/ticket behavior."""
+    if not is_pilot_mode_enabled():
+        return
+    participant = str(
+        st.session_state.get("pilot_participant_name", "Pilot participant")
+    )
+    ticket_notice = (
+        "Real ticket submission is disabled."
+        if is_pilot_ticket_submission_disabled()
+        else "Ticket submission is enabled for this pilot."
+    )
+    st.info(
+        f"{get_pilot_label()} — Signed in as {participant}. "
+        "Questions and feedback are saved for IT review. "
+        f"{ticket_notice}"
+    )
+
+
 def render_chat() -> None:
     """Render chat, persist messages, and show user input immediately."""
     _inject_ticket_feedback_styles()
+    if not _render_pilot_registration():
+        return
     initialize_chat()
     trim_chat_history()
 
@@ -2866,6 +3020,8 @@ def render_chat() -> None:
         height="stretch",
         gap="small",
     ):
+        _render_pilot_banner()
+
         # A small built-in control makes the Feature 1 session lifecycle
         # complete. This can later be moved to the left panel if preferred.
         toolbar_spacer, toolbar_button = st.columns(
@@ -3008,6 +3164,13 @@ def render_chat() -> None:
                 trim_chat_history()
                 st.rerun()
 
+        rate_limit_notice = st.session_state.pop(
+            RATE_LIMIT_NOTICE_KEY,
+            None,
+        )
+        if rate_limit_notice:
+            st.warning(str(rate_limit_notice))
+
         user_question = st.chat_input(
             "Describe your IT issue...",
             key="sjk_support_chat",
@@ -3019,6 +3182,21 @@ def render_chat() -> None:
 
         if not cleaned_question:
             return
+
+        rate_limit_decision = _check_session_message_rate_limit()
+        if not rate_limit_decision.allowed:
+            seconds = rate_limit_decision.retry_after_seconds
+            LOGGER.warning(
+                "Message rate limit blocked session %s for %s second(s)",
+                _ensure_session_id(),
+                seconds,
+            )
+            st.session_state[RATE_LIMIT_NOTICE_KEY] = (
+                "You have sent several messages in a short time. "
+                f"Please wait {seconds} second"
+                f"{'s' if seconds != 1 else ''} and try again."
+            )
+            st.rerun()
 
         detected_platform = detect_platform(cleaned_question)
 

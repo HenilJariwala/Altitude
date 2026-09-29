@@ -8,8 +8,11 @@ from typing import Any
 from dotenv import load_dotenv
 from ollama import Client
 
+from core.app_logging import get_logger
+
 
 load_dotenv()
+LOGGER = get_logger("intent_classifier")
 
 
 OLLAMA_MODEL = os.getenv(
@@ -167,9 +170,10 @@ Current message:
             },
         )
     except Exception as error:
-        print(
-            "Intent classification failed: "
-            f"{type(error).__name__}: {error}"
+        LOGGER.exception(
+            "Intent classification failed: %s: %s",
+            type(error).__name__,
+            error,
         )
         return unknown_intent()
 

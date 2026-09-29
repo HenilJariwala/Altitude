@@ -309,13 +309,18 @@ def check_project_structure() -> str:
         "app/pages/admin.py",
         "app/core/analytics_db.py",
         "app/core/admin_auth.py",
+        "app/core/app_logging.py",
+        "app/core/contextual_support_router.py",
         "app/core/inventory_router.py",
+        "app/core/pilot.py",
+        "app/core/web_support.py",
         "app/core/ticketing_client.py",
         "app/core/system_health.py",
         "app/ui/styles.css",
         "app/ui/admin_styles.css",
         ".streamlit/config.toml",
         "requirements.txt",
+        "scripts/test_pilot_context_followups_v15.py",
         ".env.example",
     )
     missing = [path for path in required_paths if not (PROJECT_ROOT / path).is_file()]
@@ -341,6 +346,7 @@ def check_required_packages() -> str:
         "rapidfuzz",
         "numpy",
         "streamlit-cookies-controller",
+        "ddgs",
     )
     missing: list[str] = []
     versions: list[str] = []
@@ -395,6 +401,27 @@ def check_environment_configuration() -> str:
     ticketing_origin = (
         "custom" if os.getenv("TICKETING_BASE_URL", "").strip() else "built-in default"
     )
+    pilot_enabled = os.getenv("ALTITUDE_PILOT_MODE", "").strip().casefold() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+    if pilot_enabled:
+        pilot_database = os.getenv("ALTITUDE_DB_PATH", "").strip().casefold()
+        pilot_tickets_disabled = os.getenv(
+            "ALTITUDE_PILOT_DISABLE_TICKETS",
+            "true",
+        ).strip().casefold() in {"1", "true", "yes", "on"}
+        pilot_problems: list[str] = []
+        if "pilot" not in Path(pilot_database).name:
+            pilot_problems.append("ALTITUDE_DB_PATH should use a separate pilot database")
+        if not pilot_tickets_disabled:
+            pilot_problems.append("ALTITUDE_PILOT_DISABLE_TICKETS is not enabled")
+        if pilot_problems:
+            missing_by_group.append("Pilot: " + ", ".join(pilot_problems))
+        else:
+            configured_groups.append("Pilot")
     detail = (
         f"Configured groups: {', '.join(configured_groups) or 'none'}. "
         f"Timezone: {timezone_name}. Ticketing origin: {ticketing_origin}."
@@ -420,9 +447,13 @@ def check_app_imports() -> str:
     modules = (
         "core.admin_auth",
         "core.analytics_db",
+        "core.app_logging",
         "core.assistant",
+        "core.contextual_support_router",
         "core.conversation_router",
         "core.inventory_router",
+        "core.pilot",
+        "core.rate_limiter",
         "core.resolution_notifications",
         "core.system_health",
         "core.ticketing_client",
@@ -500,16 +531,20 @@ def check_temporary_database_features() -> str:
         get_feedback_summary,
         get_knowledge_queue_summary,
         get_latest_ticket_for_session,
+        get_pilot_participants,
+        get_pilot_summary,
         get_security_summary,
         get_ticket_summary,
         initialize_database,
         list_announcements,
         list_feedback_records,
         list_knowledge_drafts,
+        list_pilot_questions,
         list_security_findings,
         log_security_event,
         log_unauthorized_ticket_attempt,
         mark_ticket_submitted,
+        register_pilot_participant,
         save_feedback,
         save_message,
         set_announcement_active,
@@ -524,6 +559,7 @@ def check_temporary_database_features() -> str:
             initialize_database()
             session_id = "feature-test-session"
             create_conversation(session_id)
+            register_pilot_participant(session_id, "Faculty Tester")
             user_id = save_message(
                 session_id=session_id,
                 role="user",
@@ -562,6 +598,24 @@ def check_temporary_database_features() -> str:
             feedback_rows = list_feedback_records(limit=10)
             if feedback_summary["not_helpful_votes"] != 1 or len(feedback_rows) != 1:
                 raise AssertionError("Feedback save/summary/list workflow failed.")
+
+            pilot_summary = get_pilot_summary()
+            pilot_participants = get_pilot_participants()
+            pilot_questions = list_pilot_questions(
+                participant_name="Faculty Tester",
+                feedback_status="not_helpful",
+                search="printer",
+            )
+            if pilot_summary["participants"] != 1:
+                raise AssertionError("Pilot participant summary failed.")
+            if pilot_summary["questions"] != 1:
+                raise AssertionError("Pilot question summary failed.")
+            if pilot_participants != ["Faculty Tester"]:
+                raise AssertionError("Pilot participant filter values failed.")
+            if len(pilot_questions) != 1:
+                raise AssertionError("Pilot question/filter workflow failed.")
+            if pilot_questions[0]["answer"] != "Restart the printer and check the queue.":
+                raise AssertionError("Pilot question was not linked to its answer.")
 
             payload = {
                 "title": "Printer offline",
@@ -686,7 +740,8 @@ def check_temporary_database_features() -> str:
                 raise AssertionError("SQLite foreign-key violations were found.")
 
     return (
-        "Temporary DB passed conversation, message deduplication, feedback, ticket audit, "
+        "Temporary DB passed named pilot question capture, conversation, message "
+        "deduplication, feedback, ticket audit, "
         "knowledge queue draft creation, security review, announcement lifecycle, "
         "and integrity checks."
     )
@@ -963,7 +1018,15 @@ def check_admin_streamlit_ui() -> str:
     from core.admin_auth import create_password_hash
     from streamlit.testing.v1 import AppTest
 
-    sections = ("overview", "feedback", "tickets", "security", "announcements", "health")
+    sections = (
+        "overview",
+        "pilot",
+        "feedback",
+        "tickets",
+        "security",
+        "announcements",
+        "health",
+    )
     password = "Altitude-admin-ui-test-123456"
     with tempfile.TemporaryDirectory(prefix="altitude-admin-ui-") as temp_directory:
         environment = {
@@ -1010,6 +1073,7 @@ def check_admin_streamlit_ui() -> str:
                 )
             expected_navigation = {
                 "Overview",
+                "Faculty Pilot",
                 "Feedback",
                 "Tickets",
                 "Security",
@@ -1201,16 +1265,101 @@ def check_manual_browser_acceptance() -> str:
 
 
 def check_rate_limit_requirement() -> str:
-    chat_source = (APP_ROOT / "pages" / "chat.py").read_text(encoding="utf-8")
-    has_rate_limit = bool(
-        re.search(r"rate[_ -]?limit|throttl", chat_source, flags=re.IGNORECASE)
-    )
-    if not has_rate_limit:
-        raise CheckWarning(
-            "The project limits stored chat history, but a true per-session message-rate limiter "
-            "was not detected. NFR-8 should remain marked incomplete until throttling is implemented."
+    from core.rate_limiter import evaluate_message_rate
+
+    timestamps: tuple[float, ...] = ()
+    for moment in (100.0, 101.0, 102.0):
+        decision = evaluate_message_rate(
+            timestamps,
+            now=moment,
+            message_limit=3,
+            window_seconds=10,
         )
-    return "A per-session rate-limit/throttling implementation was detected."
+        if not decision.allowed:
+            raise AssertionError("A request inside the configured limit was blocked.")
+        timestamps = decision.timestamps
+
+    blocked = evaluate_message_rate(
+        timestamps,
+        now=103.0,
+        message_limit=3,
+        window_seconds=10,
+    )
+    if blocked.allowed or blocked.retry_after_seconds != 7:
+        raise AssertionError("The rolling-window limit did not block with the expected retry time.")
+    if len(blocked.timestamps) != 3:
+        raise AssertionError("A blocked request was incorrectly added to the session window.")
+
+    recovered = evaluate_message_rate(
+        blocked.timestamps,
+        now=110.1,
+        message_limit=3,
+        window_seconds=10,
+    )
+    if not recovered.allowed or recovered.remaining != 0:
+        raise AssertionError("The session did not recover when its oldest request expired.")
+
+    chat_source = (APP_ROOT / "pages" / "chat.py").read_text(encoding="utf-8")
+    if "_check_session_message_rate_limit" not in chat_source:
+        raise AssertionError("The chat submission handler does not enforce the limiter.")
+
+    return (
+        "Per-session rolling-window throttling passed allow, block, retry-time, "
+        "recovery, and chat-handler integration checks."
+    )
+
+
+def check_pilot_mode_support() -> str:
+    import logging
+
+    from core.app_logging import get_logger, read_important_log_lines, release_logger
+    from core.pilot import (
+        get_pilot_label,
+        is_pilot_mode_enabled,
+        is_pilot_ticket_submission_disabled,
+        normalize_participant_name,
+    )
+
+    with tempfile.TemporaryDirectory(prefix="altitude-pilot-log-") as temp_directory:
+        log_path = Path(temp_directory) / "important.log"
+        with temporary_environment(
+            {
+                "ALTITUDE_PILOT_MODE": "true",
+                "ALTITUDE_PILOT_LABEL": "Faculty Pilot Test",
+                "ALTITUDE_PILOT_DISABLE_TICKETS": "true",
+                "ALTITUDE_IMPORTANT_LOG_PATH": str(log_path),
+            }
+        ):
+            if not is_pilot_mode_enabled():
+                raise AssertionError("Pilot mode environment flag was not enabled.")
+            if not is_pilot_ticket_submission_disabled():
+                raise AssertionError("Pilot ticket protection was not enabled.")
+            if get_pilot_label() != "Faculty Pilot Test":
+                raise AssertionError("Pilot label configuration was not preserved.")
+            if normalize_participant_name("  Faculty   Tester ") != "Faculty Tester":
+                raise AssertionError("Pilot participant-name normalization failed.")
+
+            logger = get_logger(f"feature_test_{os.getpid()}")
+            logger.info("This informational line must not be retained")
+            logger.warning("Pilot warning check")
+            logger.error("Pilot error check")
+            for handler in logger.handlers:
+                handler.flush()
+
+            all_lines = read_important_log_lines(limit=20)
+            error_lines = read_important_log_lines(level="ERROR", limit=20)
+            if len(all_lines) != 2 or len(error_lines) != 1:
+                raise AssertionError("Important-only rotating log filtering failed.")
+            if any("informational" in line for line in all_lines):
+                raise AssertionError("Informational output was written to the important log.")
+
+            release_logger(logger)
+            logging.Logger.manager.loggerDict.pop(logger.name, None)
+
+    return (
+        "Pilot name validation, configuration, ticket protection, and "
+        "important-only log filtering passed."
+    )
 
 
 def build_argument_parser() -> argparse.ArgumentParser:
@@ -1305,6 +1454,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         "Per-session rate limiting",
         check_rate_limit_requirement,
         required=False,
+    )
+    runner.run(
+        "Pilot",
+        "Named participants and important-only logging",
+        check_pilot_mode_support,
     )
 
     if not args.quick and not args.no_ui:

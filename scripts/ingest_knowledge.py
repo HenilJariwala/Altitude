@@ -17,6 +17,11 @@ from langchain_ollama import (
     OllamaEmbeddings,
 )
 
+from core.retrieval_profile import (
+    build_retrieval_profile,
+    serialize_tags,
+)
+
 
 load_dotenv()
 
@@ -250,6 +255,27 @@ def load_markdown_chunks() -> list[Document]:
                     metadata["section_title"] = section_title
 
                     metadata["intent_keywords"] = extract_intent_keywords(section_text)
+
+                    # Build routing tags from the topic identity only. Full section
+                    # text may mention unrelated products as examples/escalation and
+                    # previously polluted retrieval tags (for example, Slides speaker
+                    # notes accidentally looked like a projector topic).
+                    retrieval_profile = build_retrieval_profile(
+                        f"{section_title} {metadata['intent_keywords']}"
+                    )
+                    metadata["retrieval_domains"] = serialize_tags(
+                        retrieval_profile.domains
+                    )
+                    metadata["retrieval_symptoms"] = serialize_tags(
+                        retrieval_profile.symptoms
+                    )
+                    metadata["retrieval_products"] = serialize_tags(
+                        retrieval_profile.products
+                    )
+                    metadata["retrieval_platforms"] = serialize_tags(
+                        retrieval_profile.platforms
+                    )
+
                     # Retrieve using smaller embedding chunks, but pass the
                     # complete approved procedure to the answer generator.
                     metadata["full_section"] = section_text

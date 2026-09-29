@@ -55,10 +55,408 @@ def route_extended_support_question(
                 "I can help troubleshoot **Zoom**. Try these first:\n\n"
                 "1. Quit and reopen Zoom.\n"
                 "2. Confirm the microphone, camera, and speaker selected in Zoom are correct.\n"
-                "3. Check browser or macOS/Windows permission if using Zoom in a browser.\n"
+                "3. Check the browser and device privacy permission if using Zoom in a browser.\n"
                 "4. Restart the device if audio, video, or joining still fails.\n"
                 "5. Record the exact Zoom error message.\n\n"
                 "If Zoom still does not work, create an IT ticket or contact the IT Helpdesk with the meeting link source, device, and error."
+            ),
+        )
+
+    # ------------------------------------------------------------------
+    # High-confidence device and symptom routes
+    # ------------------------------------------------------------------
+    # These rules intentionally key on both the device/product and the actual
+    # failure. They prevent a generic word such as "browser", "update", or
+    # "classroom" from sending the request to an unrelated knowledge topic.
+
+    if _has_all(text, ("chromebook",), ("won't charge", "wont charge", "not charging", "does not charge", "charger")):
+        return ExtendedSupportDecision(
+            True,
+            (
+                "Try these Chromebook charging checks:\n\n"
+                "1. Confirm the charger is firmly connected to both the Chromebook and the wall outlet.\n"
+                "2. Try another known-working outlet.\n"
+                "3. Disconnect USB devices, docks, and other accessories.\n"
+                "4. If the Chromebook has more than one USB-C charging port, try the other approved charging port.\n"
+                "5. Leave the approved charger connected for at least 15 minutes, then try powering the Chromebook on.\n"
+                "6. Check whether the charging light appears or changes colour.\n\n"
+                "If it still will not charge, stop testing different unapproved chargers and contact the IT Helpdesk for a charger, port, or battery check."
+            ),
+        )
+
+    if (
+        _has(text, "battery", "battery life")
+        and _has(
+            text,
+            "drain",
+            "drains",
+            "draining",
+            "dying",
+            "dies",
+            "doesn't last",
+            "does not last",
+            "before lunch",
+            "less than an hour",
+            "only lasts",
+        )
+        and not _has(
+            text,
+            "won't turn on",
+            "wont turn on",
+            "will not turn on",
+            "battery died and",
+        )
+    ):
+        return ExtendedSupportDecision(
+            True,
+            (
+                "A laptop that starts fully charged but loses most of its battery "
+                "before the day is over should be checked for battery health and "
+                "unusually high power use.\n\n"
+                "1. Restart the laptop and charge it to full with the approved charger.\n"
+                "2. Lower screen brightness and close apps, browser tabs, video calls, "
+                "and other programs that are not needed.\n"
+                "3. Open the device's Battery or Power settings and review which apps "
+                "are using the most battery.\n"
+                "4. Check the battery-health or condition message if the operating "
+                "system provides one.\n"
+                "5. Disconnect unused docks, USB devices, and external displays, then "
+                "test the battery again.\n"
+                "6. Record roughly how long the laptop lasts from 100% to a low charge.\n\n"
+                "If the battery still drains unusually quickly, shows a service/replace "
+                "warning, becomes very hot, or the laptop shuts down unexpectedly, "
+                "contact the IT Helpdesk for a battery-health check."
+            ),
+        )
+
+    if _has_all(text, ("update", "updates"), ("force", "restart", "middle of a lesson", "during class")):
+        return ExtendedSupportDecision(
+            True,
+            (
+                "Save your work first. A school-managed computer may require a restart to finish approved operating-system updates.\n\n"
+                "1. Save and close important documents before the restart deadline.\n"
+                "2. Open the operating system's update settings and check whether a restart time or active-hours option is available.\n"
+                "3. Schedule the restart outside the lesson if the device allows it.\n"
+                "4. Keep the laptop connected to power while updates finish.\n"
+                "5. Do not repeatedly force-shut down the computer while an update is installing.\n\n"
+                "If restart controls are locked or the device repeatedly interrupts lessons, contact the IT Helpdesk with the device name and update message."
+            ),
+        )
+
+    if _has_all(text, ("projector", "classroom display"), ("purple", "fuzzy", "blurry", "tint", "colour", "color")):
+        return ExtendedSupportDecision(
+            True,
+            (
+                "A purple tint or fuzzy projector image usually points to the display connection, input, or resolution rather than the presentation itself.\n\n"
+                "1. Reseat the HDMI, USB-C, or display cable at both ends.\n"
+                "2. If an adapter is used, disconnect and reconnect it.\n"
+                "3. Confirm the projector is on the correct input/source.\n"
+                "4. Open the laptop's display settings and use the recommended resolution and refresh rate.\n"
+                "5. Test another approved cable or adapter if one is available.\n"
+                "6. If possible, test the projector with another school device to determine whether the issue follows the laptop or the projector.\n\n"
+                "If the purple tint or fuzzy image remains, contact IT with the classroom location and connection type."
+            ),
+        )
+
+    if (
+        _has(text, "projector", "classroom display")
+        and _has(text, "extend", "extended display", "extended desktop")
+        and _has(text, "no signal", "signal lost", "loses signal")
+    ):
+        return ExtendedSupportDecision(
+            True,
+            (
+                "If the projector works in **Duplicate/Mirror** mode but shows "
+                "**No Signal** in **Extend** mode, the cable path is probably working. "
+                "Check the extended-display output settings next.\n\n"
+                "1. Switch back to Duplicate/Mirror once to confirm the projector still "
+                "receives video.\n"
+                "2. Open the laptop's display settings, switch to **Extend**, and select "
+                "the projector/external display.\n"
+                "3. Confirm the projector is enabled as an active display rather than "
+                "disconnected or disabled.\n"
+                "4. Set that external display to its recommended resolution and a "
+                "standard refresh rate such as 60 Hz when available.\n"
+                "5. Confirm the projector is still on the same HDMI/display input.\n"
+                "6. Reseat the HDMI/USB-C adapter or cable, then try Extend again.\n"
+                "7. Restart the laptop if the projector is detected but immediately "
+                "drops signal only in Extend mode.\n\n"
+                "If Duplicate works but Extend still does not, contact IT with the "
+                "classroom, laptop type, projector/input, and the resolution/refresh "
+                "rate shown for the external display."
+            ),
+        )
+
+    if _has_all(text, ("browser", "chrome", "edge", "safari"), ("pop-up", "popup", "pop up", "random tab", "random tabs")):
+        return ExtendedSupportDecision(
+            True,
+            (
+                "Unexpected pop-ups or random tabs can be caused by a website notification, browser extension, or unwanted software.\n\n"
+                "1. Close the affected browser without clicking the pop-ups.\n"
+                "2. Reopen the browser and avoid restoring suspicious tabs.\n"
+                "3. Review browser extensions and disable only extensions you do not recognize or no longer need.\n"
+                "4. Review site notification permissions and remove suspicious sites.\n"
+                "5. Install approved browser and operating-system updates.\n"
+                "6. Do not install cleanup tools or antivirus software from a pop-up.\n\n"
+                "If the tabs keep returning on a school-managed device, contact IT for a security review."
+            ),
+        )
+
+    if _has_all(text, ("microphone", "mic", "voice"), ("not picking up", "isn't picking up", "not working", "no input")):
+        return ExtendedSupportDecision(
+            True,
+            (
+                "Because audio output is working, focus on the microphone input settings:\n\n"
+                "1. Open the device's Sound settings and select the intended microphone under **Input**.\n"
+                "2. Speak and confirm that the input-level meter moves.\n"
+                "3. Check microphone privacy permission for the application or browser.\n"
+                "4. Disconnect any headset or dock temporarily to confirm the built-in microphone is selected.\n"
+                "5. Close and reopen the application, then restart the device if needed.\n\n"
+                "If the microphone fails in every application, contact the IT Helpdesk."
+            ),
+        )
+
+    if _has_all(text, ("pdf",), ("corrupted", "unsupported", "file format", "cannot open", "can't open")):
+        return ExtendedSupportDecision(
+            True,
+            (
+                "First determine whether the PDF itself is damaged or only one application cannot open it.\n\n"
+                "1. Download the file again from the original school source.\n"
+                "2. Confirm the file name ends in **.pdf** and that the download completed.\n"
+                "3. Try opening it in the browser or the device's approved PDF viewer.\n"
+                "4. Ask the sender to open their copy and resend or re-export it if their copy also fails.\n"
+                "5. Do not use an unknown online PDF repair site for school or confidential files.\n\n"
+                "If multiple known-good PDFs fail to open, contact IT with the device and application name."
+            ),
+        )
+
+    if _has_all(text, ("stylus", "digital pen", "pen"), ("not drawing", "no longer drawing", "not working", "not responding")):
+        return ExtendedSupportDecision(
+            True,
+            (
+                "Try these stylus checks:\n\n"
+                "1. Confirm the touchscreen responds normally to a finger.\n"
+                "2. Reconnect or re-pair the stylus if it uses Bluetooth.\n"
+                "3. Recharge or replace the stylus battery if applicable.\n"
+                "4. Close and reopen the drawing or note application.\n"
+                "5. Restart the device and install approved updates.\n\n"
+                "If touch works but the stylus still does not, contact IT with the device and stylus model."
+            ),
+        )
+
+    if _has_all(text, ("calendar",), ("phone", "iphone", "android", "mobile")) and _has(text, "sync", "default calendar"):
+        return ExtendedSupportDecision(
+            True,
+            (
+                "To show a school calendar in the phone's default Calendar app, first confirm that school policy allows the account on that personal device.\n\n"
+                "1. Open the phone's account settings and confirm the school account is present.\n"
+                "2. Open that account's sync settings and make sure **Calendar** is enabled.\n"
+                "3. Open the default Calendar app and confirm the school calendar is selected for display.\n"
+                "4. Refresh the calendar and restart the phone if events do not appear.\n"
+                "5. Do not remove a managed school account or profile unless IT instructs you to.\n\n"
+                "If the Calendar option is missing or blocked, contact the IT Helpdesk."
+            ),
+        )
+
+    if _has_all(text, ("scanner", "copier"), ("email", "scan to email", "sending documents")):
+        return ExtendedSupportDecision(
+            True,
+            (
+                "For a copier that is not sending scanned documents by email:\n\n"
+                "1. Confirm the recipient address is entered correctly.\n"
+                "2. Try a small one-page scan to your own school email.\n"
+                "3. Check the copier screen for a send, network, authentication, or size error.\n"
+                "4. Confirm the copier is otherwise online and can copy normally.\n"
+                "5. Record the exact error code or message.\n\n"
+                "If scan-to-email still fails, contact IT with the copier location, recipient domain, approximate time, and error message."
+            ),
+        )
+
+    if _has_all(text, ("smartboard", "smart board", "interactive display"), ("calibration", "three inches away", "offset", "touches register", "digital ink")):
+        return ExtendedSupportDecision(
+            True,
+            (
+                "The touch input appears to be miscalibrated.\n\n"
+                "1. Confirm the display image fills the Smartboard correctly and is using the recommended resolution.\n"
+                "2. Open the board's approved touch/orientation or calibration tool.\n"
+                "3. Complete the calibration points carefully with the stylus or finger.\n"
+                "4. Restart the connected computer and test both sides of the board again.\n"
+                "5. Reseat the USB touch cable if the board uses a separate USB connection for touch.\n\n"
+                "If the offset remains after calibration, contact IT with the classroom location."
+            ),
+        )
+
+    if _has_all(text, ("password",), ("too many failed login attempts", "locking my account", "account lockout")):
+        return ExtendedSupportDecision(
+            True,
+            (
+                "A recently changed password can leave an old password saved on another device or service, which can repeatedly trigger account lockouts.\n\n"
+                "1. Stop repeated sign-in attempts until the lockout clears or IT unlocks the account.\n"
+                "2. Update the saved school Wi-Fi, VPN, email, and other school-service credentials on devices that used the old password.\n"
+                "3. Restart the laptop and phone after updating saved credentials.\n"
+                "4. Sign in once with the new password and avoid repeated retries.\n\n"
+                "If the account locks again, contact IT so the source of the repeated failed sign-ins can be identified."
+            ),
+        )
+
+    if _has_all(text, ("screen", "display"), ("flicker", "flickers", "dim")) and _has(text, "unplug", "charger", "battery"):
+        return ExtendedSupportDecision(
+            True,
+            (
+                "Because the display problem appears only when the laptop switches to battery power, check power and display settings first:\n\n"
+                "1. Save your work and restart the laptop.\n"
+                "2. Open Battery/Power settings and temporarily disable aggressive display dimming or battery-saver options for testing.\n"
+                "3. Set the screen to a normal brightness while unplugged.\n"
+                "4. Install approved operating-system and graphics updates.\n"
+                "5. Test again without a dock or external display connected.\n\n"
+                "If the screen still flickers or becomes unusably dim on battery, contact IT for a battery/display hardware check."
+            ),
+        )
+
+    if _has_all(text, ("software", "program", "application"), ("local database", "database server")):
+        return ExtendedSupportDecision(
+            True,
+            (
+                "A **local database server** error is different from an internet outage.\n\n"
+                "1. Close and reopen the educational application.\n"
+                "2. Restart the computer to restart any approved local services.\n"
+                "3. Confirm the application is using its normal school profile or data location.\n"
+                "4. Record the exact database/server name and error message.\n"
+                "5. Do not change database ports, services, or credentials unless IT provides the procedure.\n\n"
+                "If the error returns after a restart, contact IT with the application name and exact message."
+            ),
+        )
+
+    if _has_all(text, ("microphone", "mic"), ("in use by another application", "currently in use", "used by another application")):
+        return ExtendedSupportDecision(
+            True,
+            (
+                "Another application is holding the microphone open.\n\n"
+                "1. Close Zoom, Google Meet tabs, recording tools, and other apps that may be using the microphone.\n"
+                "2. Reopen only the application you want to record with.\n"
+                "3. Confirm the USB microphone is selected as the input device.\n"
+                "4. Unplug and reconnect the microphone, then restart the computer if it is still reported as busy.\n"
+                "5. Check microphone privacy permissions for the intended app.\n\n"
+                "If no visible app is using it and the error continues, contact IT."
+            ),
+        )
+
+    if _has_all(text, ("vpn",), ("network drive", "network drives", "internal drive", "internal network drives")):
+        return ExtendedSupportDecision(
+            True,
+            (
+                "If the VPN connects but internal network drives are unavailable:\n\n"
+                "1. Confirm the VPN shows a successful connection before opening the drive.\n"
+                "2. Disconnect and reconnect the VPN once.\n"
+                "3. Reopen File Explorer or Finder and try the normal approved drive path again.\n"
+                "4. Restart the computer and reconnect the VPN.\n"
+                "5. Record the exact drive name/path and any access or name-resolution error.\n\n"
+                "Do not change VPN, DNS, or server settings. If the drive still cannot be reached, contact IT with the VPN status and error."
+            ),
+        )
+
+    if (
+        _has(text, "network drive", "network drives", "mapped drive", "shared drive")
+        and _has(
+            text,
+            "missing",
+            "disappeared",
+            "not showing",
+            "cannot find",
+            "can't find",
+            "cant find",
+            "not there",
+        )
+    ):
+        return ExtendedSupportDecision(
+            True,
+            (
+                "A school **network drive** that disappears after a restart usually "
+                "needs the school network/VPN connection or the mapped share to "
+                "reconnect.\n\n"
+                "1. Confirm the laptop is connected to the approved school network. "
+                "If you are off campus, connect to the approved school VPN first.\n"
+                "2. Reopen **Finder** on a Mac or the **Files** app on a Chromebook "
+                "and check whether the normal drive/share reappears.\n"
+                "3. If the drive is listed but disconnected, open it once to trigger a "
+                "reconnection.\n"
+                "4. Sign out and back in, or restart once more after the network/VPN is "
+                "fully connected.\n"
+                "5. Do not guess or create a new server path. Record the normal drive "
+                "letter/share name and any error message instead.\n\n"
+                "If the drive is still missing, contact the IT Helpdesk with the drive "
+                "name, whether you are on campus or VPN, and the exact error."
+            ),
+        )
+
+    if _has_all(text, ("cursor", "pointer"), ("jumping", "moves on its own", "completely on its own")):
+        return ExtendedSupportDecision(
+            True,
+            (
+                "Because the pointer still moves after the external mouse and Bluetooth are disconnected, test the built-in touchpad/trackpad or touchscreen instead:\n\n"
+                "1. Clean and dry the touchpad/trackpad and touchscreen.\n"
+                "2. Remove anything resting on or touching the input surface.\n"
+                "3. Restart the computer.\n"
+                "4. Test with external mice and Bluetooth devices still disconnected.\n"
+                "5. If the device has a touchscreen, note whether touching the screen causes the jump.\n\n"
+                "If the pointer continues moving on its own, contact IT for an input-device hardware check."
+            ),
+        )
+
+    if _has_all(text, ("google doc", "google docs"), ("refresh", "refreshes", "edits disappear", "type")):
+        return ExtendedSupportDecision(
+            True,
+            (
+                "This sounds like a live-editing or browser-session problem, not document formatting.\n\n"
+                "1. Confirm the student has **Editor** permission on the Google Doc.\n"
+                "2. Confirm the student is signed in with the intended school Google account.\n"
+                "3. Open the document in a private/incognito window and test a small edit.\n"
+                "4. Disable only nonessential browser extensions and test again.\n"
+                "5. Check Version history to confirm whether edits are being saved and then removed, or never saved at all.\n"
+                "6. Try another supported browser or school device.\n\n"
+                "If the page continues refreshing for multiple users, contact IT with the document link and affected accounts."
+            ),
+        )
+
+    if _has_all(text, ("adobe", "acrobat", "pdf"), ("print", "prints", "printing", "printer")) and _has(text, "weird symbols", "gibberish", "random characters"):
+        return ExtendedSupportDecision(
+            True,
+            (
+                "Because other documents print correctly, focus on PDF rendering rather than the printer connection.\n\n"
+                "1. Try printing the same PDF from the browser or the device's approved system PDF viewer.\n"
+                "2. In Adobe Acrobat, open the print dialog and use **Advanced → Print as Image** if that approved option is available.\n"
+                "3. Confirm the correct printer and paper settings, then test one page.\n"
+                "4. Try another known-good PDF from Acrobat to see whether the issue affects one file or every PDF.\n"
+                "5. Do not install an unapproved printer driver.\n\n"
+                "If all Acrobat PDFs still print as symbols, contact IT with the printer and Acrobat version."
+            ),
+        )
+
+    if _has_all(text, ("audio", "sound", "speakers"), ("out of sync", "audio delay", "seconds out of sync", "delayed")):
+        return ExtendedSupportDecision(
+            True,
+            (
+                "The audio output is present but delayed, so changing the output device alone is unlikely to fix it.\n\n"
+                "1. Stop and restart the video, then test a short local clip.\n"
+                "2. If using AirPlay or wireless casting, disconnect and reconnect the session.\n"
+                "3. If using HDMI/USB-C, reseat the cable or adapter.\n"
+                "4. Close other high-bandwidth apps and browser tabs.\n"
+                "5. Restart the laptop and classroom display if you are authorized to do so.\n"
+                "6. Compare a local video with a streamed video to determine whether the delay is network-related.\n\n"
+                "If the classroom speakers remain several seconds behind, contact IT with the room and connection method."
+            ),
+        )
+
+    if _has_all(text, ("chromebook",), ("guest network", "staff network")) and _has(text, "forget", "cannot forget", "can't forget", "won't let me"):
+        return ExtendedSupportDecision(
+            True,
+            (
+                "If a Chromebook will not let you forget a school network, that network may be managed by school policy.\n\n"
+                "1. Restart the Chromebook.\n"
+                "2. Open Wi-Fi settings and select the approved staff network if it is available.\n"
+                "3. Do not try to remove management or bypass a locked network setting.\n"
+                "4. Record which network reconnects automatically and whether the **Forget** control is disabled.\n\n"
+                "If the wrong managed network keeps taking priority, contact IT so the assigned Wi-Fi policy can be checked."
             ),
         )
 
@@ -149,7 +547,11 @@ def route_extended_support_question(
     # ------------------------------------------------------------------
     # Additional high-confidence school IT routes from 96-question testing
     # ------------------------------------------------------------------
-    if _has_all(text, ("laptop", "school network"), ("won't connect", "wont connect", "cannot connect", "can't connect", "what do i do")):
+    if (
+        _has(text, "laptop", "computer", "school device")
+        and _has(text, "school network", "wifi", "wi-fi", "wireless")
+        and _has(text, "won't connect", "wont connect", "cannot connect", "can't connect", "cant connect")
+    ):
         return ExtendedSupportDecision(
             True,
             (
@@ -309,12 +711,12 @@ def route_extended_support_question(
             ),
         )
 
-    if _has_all(text, ("add", "new printer"), ("printer", "laptop")):
+    if _has(text, "printer", "new printer") and _has(text, "add", "new printer"):
         return ExtendedSupportDecision(
             True,
             (
                 "To add a school printer, first confirm the printer name or location and make sure the laptop is on the approved school network. "
-                "On a Mac, open **System Settings → Printers & Scanners → Add Printer**. On Windows, open **Settings → Bluetooth & devices → Printers & scanners → Add device**. "
+                "On a Mac, open **System Settings → Printers & Scanners → Add Printer**. On a managed Chromebook, open **Settings → Device → Print and scan → Printers** and use only printers deployed by the school. "
                 "Use the school's approved printer details only, and contact IT if administrator credentials or a driver prompt appears."
             ),
         )
@@ -408,7 +810,7 @@ def route_extended_support_question(
             ),
         )
 
-    if _has_all(text, ("app", "chromebook"), ("crashing", "crash", "keep crashing")):
+    if _has(text, "chromebook") and _has(text, "app", "application") and _has(text, "crashing", "crash", "keep crashing"):
         return ExtendedSupportDecision(
             True,
             (
@@ -435,7 +837,7 @@ def route_extended_support_question(
             True,
             (
                 "School devices may block manual update installation because updates are managed for compatibility, security, testing schedules, and bandwidth. "
-                "Keep the device on power and school Wi-Fi, restart when prompted, and use the approved update tool or Self Service/Company Portal. Contact IT if an urgent security patch or required app update is missing."
+                "Keep the device on power and school Wi-Fi, restart when prompted, and use the approved update tool, Self Service, or managed school app catalogue. Contact IT if an urgent security patch or required app update is missing."
             ),
         )
 
@@ -531,7 +933,11 @@ def route_extended_support_question(
             ),
         )
 
-    if _has_all(text, ("gmail", "phone"), ("log into", "can't", "cannot")):
+    if (
+        _has(text, "gmail")
+        and _has(text, "phone", "iphone", "android")
+        and _has(text, "log into", "log in", "sign in", "can't log", "cannot log", "cant log")
+    ):
         return ExtendedSupportDecision(
             True,
             (
@@ -571,7 +977,7 @@ def route_extended_support_question(
         return ExtendedSupportDecision(
             True,
             (
-                "To check security patch status, open the device's approved update area: **System Settings → General → Software Update** on Mac, **Settings → Windows Update** on Windows, or **Settings → About ChromeOS** on Chromebook. "
+                "To check security patch status, open the device's approved update area: **System Settings → General → Software Update** on Mac or **Settings → About ChromeOS** on Chromebook. "
                 "Managed devices may install updates on a school schedule. Contact IT if the device is far behind or update controls are locked."
             ),
         )
@@ -733,7 +1139,7 @@ def route_extended_support_question(
             ),
         )
 
-    if _has_all(text, ("loaner", "macbook", "chromebook"), ("how long", "duration", "keep", "due")):
+    if _has(text, "loaner", "loner") and _has(text, "how long", "duration", "keep", "due"):
         return ExtendedSupportDecision(
             True,
             (
@@ -745,7 +1151,7 @@ def route_extended_support_question(
             ),
         )
 
-    if _has_all(text, ("loaner", "laptop"), ("reserve", "portal", "before")):
+    if _has(text, "loaner", "loner") and _has(text, "reserve", "portal", "before"):
         return ExtendedSupportDecision(
             True,
             (
@@ -1115,7 +1521,7 @@ def route_extended_support_question(
     # ------------------------------------------------------------------
     # School accounts and Google Workspace
     # ------------------------------------------------------------------
-    if _has_all(text, ("password",), ("90-day", "expiration", "before", "change my password")):
+    if _has(text, "password") and _has(text, "90-day", "expiration", "expires", "change my password"):
         return ExtendedSupportDecision(
             True,
             (
@@ -1438,7 +1844,7 @@ def route_extended_support_question(
         return ExtendedSupportDecision(
             True,
             (
-                "Open the school-managed **Self Service** or **Company Portal**, sign in with "
+                "Open the school-managed **Self Service** or approved app catalogue, sign in with "
                 "the school account if requested, search for the approved app, and select "
                 "Install. Keep the device on power and Wi-Fi until it finishes. If the app is "
                 "missing, installation fails, or administrator credentials appear, contact IT "
@@ -1446,7 +1852,7 @@ def route_extended_support_question(
             ),
         )
 
-    if _has_all(text, ("approved app", "app"), ("crash", "crashes", "immediately", "open")):
+    if _has(text, "approved app", "app", "application") and _has(text, "crash", "crashes", "crashing", "closes immediately"):
         return ExtendedSupportDecision(
             True,
             (

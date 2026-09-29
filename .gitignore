@@ -28,3 +28,5 @@ data/learned_knowledge_archive/
 test_reports/
 knowledge_base.zip
 ticket_*_debug.html
+
+data/*.pid

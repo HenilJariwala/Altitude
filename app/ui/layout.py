@@ -8,11 +8,13 @@ from pathlib import Path
 import streamlit as st
 
 from core.analytics_db import get_active_announcements, initialize_database
+from core.app_logging import get_logger
 from core.inventory_router import fetch_inventory
 
 APP_DIRECTORY = Path(__file__).resolve().parents[1]
 STATIC_DIRECTORY = APP_DIRECTORY / "static"
 STYLES_FILE = Path(__file__).with_name("styles.css")
+LOGGER = get_logger("layout")
 
 
 
@@ -212,9 +214,10 @@ def render_announcements_card() -> None:
             else "No active notices"
         )
     except Exception as error:
-        print(
-            "Left-panel announcements error: "
-            f"{type(error).__name__}: {error}"
+        LOGGER.exception(
+            "Left-panel announcements error: %s: %s",
+            type(error).__name__,
+            error,
         )
         rows_html = """
 <div class="sjk-announcement-empty">
@@ -344,9 +347,10 @@ def render_live_inventory_card() -> None:
         )
 
     except Exception as error:
-        print(
-            "Left-panel inventory error: "
-            f"{type(error).__name__}: {error}"
+        LOGGER.exception(
+            "Left-panel inventory error: %s: %s",
+            type(error).__name__,
+            error,
         )
 
         st.html(
@@ -453,9 +457,10 @@ def render_mobile_info_popover() -> None:
                 else:
                     st.caption("There are no active announcements right now.")
             except Exception as error:
-                print(
-                    "Mobile announcements error: "
-                    f"{type(error).__name__}: {error}"
+                LOGGER.exception(
+                    "Mobile announcements error: %s: %s",
+                    type(error).__name__,
+                    error,
                 )
                 st.warning("Announcements are temporarily unavailable.")
 
@@ -520,9 +525,10 @@ def render_mobile_info_popover() -> None:
                 )
 
             except Exception as error:
-                print(
-                    "Mobile inventory error: "
-                    f"{type(error).__name__}: {error}"
+                LOGGER.exception(
+                    "Mobile inventory error: %s: %s",
+                    type(error).__name__,
+                    error,
                 )
 
                 st.warning(

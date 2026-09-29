@@ -48,7 +48,7 @@ def main() -> None:
         save_message(
             session_id=session_id,
             role="assistant",
-            content="Are you using a Mac or Windows device?",
+            content="Are you using a Mac or Chromebook?",
             route="clarification",
             feedback_eligible=False,
         )

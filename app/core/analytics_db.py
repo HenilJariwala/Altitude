@@ -275,6 +275,24 @@ def _ensure_schema_extensions(connection: sqlite3.Connection) -> None:
     """Apply idempotent ticket-sync, security, and knowledge schema extensions."""
     _ensure_column(
         connection,
+        table_name="conversations",
+        column_name="participant_name",
+        definition="TEXT",
+    )
+    _ensure_column(
+        connection,
+        table_name="conversations",
+        column_name="pilot_mode",
+        definition="INTEGER NOT NULL DEFAULT 0",
+    )
+    _ensure_column(
+        connection,
+        table_name="conversations",
+        column_name="participant_consent_at",
+        definition="TEXT",
+    )
+    _ensure_column(
+        connection,
         table_name="tickets",
         column_name="last_synced_at",
         definition="TEXT",
@@ -423,13 +441,22 @@ def _ensure_schema_extensions(connection: sqlite3.Connection) -> None:
     )
 
 
-def create_conversation(session_id: str) -> None:
+def create_conversation(
+    session_id: str,
+    *,
+    participant_name: str | None = None,
+    pilot_mode: bool = False,
+) -> None:
     """Create a conversation if it does not already exist."""
     session_id = session_id.strip()
 
     if not session_id:
         raise ValueError("session_id cannot be empty")
 
+    clean_participant = (
+        " ".join(str(participant_name or "").split()).strip()[:100]
+        or None
+    )
     now = utc_now()
 
     with database_connection() as connection:
@@ -438,21 +465,61 @@ def create_conversation(session_id: str) -> None:
             INSERT OR IGNORE INTO conversations (
                 session_id,
                 started_at,
-                updated_at
+                updated_at,
+                participant_name,
+                pilot_mode,
+                participant_consent_at
             )
-            VALUES (?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?)
             """,
-            (session_id, now, now),
+            (
+                session_id,
+                now,
+                now,
+                clean_participant,
+                int(pilot_mode),
+                now if pilot_mode and clean_participant else None,
+            ),
         )
 
         connection.execute(
             """
             UPDATE conversations
-            SET updated_at = ?
+            SET
+                updated_at = ?,
+                participant_name = COALESCE(?, participant_name),
+                pilot_mode = MAX(pilot_mode, ?),
+                participant_consent_at = CASE
+                    WHEN participant_consent_at IS NULL
+                         AND ? = 1
+                         AND ? IS NOT NULL
+                    THEN ?
+                    ELSE participant_consent_at
+                END
             WHERE session_id = ?
             """,
-            (now, session_id),
+            (
+                now,
+                clean_participant,
+                int(pilot_mode),
+                int(pilot_mode),
+                clean_participant,
+                now,
+                session_id,
+            ),
         )
+
+
+def register_pilot_participant(session_id: str, participant_name: str) -> None:
+    """Attach a disclosed faculty participant name to a pilot conversation."""
+    clean_name = " ".join(str(participant_name).split()).strip()[:100]
+    if not clean_name:
+        raise ValueError("participant_name cannot be empty")
+    create_conversation(
+        session_id,
+        participant_name=clean_name,
+        pilot_mode=True,
+    )
 
 
 def save_message(
@@ -944,6 +1011,173 @@ def get_feedback_filter_options() -> dict[str, list[str]]:
         "platforms": [str(row["value"]) for row in platform_rows],
         "sources": [str(row["value"]) for row in source_rows],
     }
+
+
+def get_pilot_summary() -> dict[str, int | float]:
+    """Return headline metrics for named faculty pilot activity."""
+    with database_connection() as connection:
+        row = connection.execute(
+            """
+            SELECT
+                COUNT(DISTINCT conversations.session_id) AS conversations,
+                COUNT(DISTINCT NULLIF(TRIM(conversations.participant_name), ''))
+                    AS participants,
+                COUNT(DISTINCT CASE
+                    WHEN messages.role = 'user' THEN messages.message_id
+                END) AS questions,
+                COUNT(DISTINCT feedback.feedback_id) AS feedback_votes,
+                COUNT(DISTINCT CASE
+                    WHEN feedback.helpful = 0 THEN feedback.feedback_id
+                END) AS not_helpful_votes
+            FROM conversations
+            LEFT JOIN messages
+                ON messages.session_id = conversations.session_id
+            LEFT JOIN feedback
+                ON feedback.session_id = conversations.session_id
+            WHERE conversations.pilot_mode = 1
+            """
+        ).fetchone()
+
+    values = dict(row) if row is not None else {}
+    questions = int(values.get("questions") or 0)
+    votes = int(values.get("feedback_votes") or 0)
+    return {
+        "participants": int(values.get("participants") or 0),
+        "conversations": int(values.get("conversations") or 0),
+        "questions": questions,
+        "feedback_votes": votes,
+        "not_helpful_votes": int(values.get("not_helpful_votes") or 0),
+        "feedback_coverage": round((votes / questions) * 100, 1)
+        if questions
+        else 0.0,
+    }
+
+
+def get_pilot_participants() -> list[str]:
+    """Return distinct faculty pilot participant names for admin filters."""
+    with database_connection() as connection:
+        rows = connection.execute(
+            """
+            SELECT DISTINCT TRIM(participant_name) AS participant_name
+            FROM conversations
+            WHERE pilot_mode = 1
+              AND participant_name IS NOT NULL
+              AND TRIM(participant_name) <> ''
+            ORDER BY participant_name COLLATE NOCASE
+            """
+        ).fetchall()
+    return [str(row["participant_name"]) for row in rows]
+
+
+def list_pilot_questions(
+    *,
+    participant_name: str | None = None,
+    feedback_status: str | None = None,
+    search: str | None = None,
+    limit: int = 2_000,
+    offset: int = 0,
+) -> list[dict[str, Any]]:
+    """Return pilot questions with the following answer and its feedback."""
+    safe_limit = max(1, min(int(limit), 10_000))
+    safe_offset = max(0, int(offset))
+    clauses: list[str] = []
+    parameters: list[Any] = []
+
+    clean_participant = " ".join(str(participant_name or "").split()).strip()
+    if clean_participant:
+        clauses.append("question_rows.participant_name = ?")
+        parameters.append(clean_participant)
+
+    clean_feedback = str(feedback_status or "").strip().casefold()
+    if clean_feedback == "helpful":
+        clauses.append("question_rows.helpful = 1")
+    elif clean_feedback == "not_helpful":
+        clauses.append("question_rows.helpful = 0")
+    elif clean_feedback == "no_feedback":
+        clauses.append("question_rows.helpful IS NULL")
+
+    clean_search = str(search or "").strip().casefold()
+    if clean_search:
+        clauses.append(
+            """
+            (
+                LOWER(COALESCE(question_rows.participant_name, '')) LIKE ?
+                OR LOWER(COALESCE(question_rows.question, '')) LIKE ?
+                OR LOWER(COALESCE(question_rows.answer, '')) LIKE ?
+                OR LOWER(COALESCE(question_rows.route, '')) LIKE ?
+                OR LOWER(COALESCE(question_rows.platform, '')) LIKE ?
+                OR LOWER(COALESCE(question_rows.feedback_reason, '')) LIKE ?
+                OR LOWER(COALESCE(question_rows.feedback_comment, '')) LIKE ?
+            )
+            """
+        )
+        pattern = f"%{clean_search}%"
+        parameters.extend([pattern] * 7)
+
+    where_sql = ""
+    if clauses:
+        where_sql = "WHERE " + " AND ".join(clauses)
+    parameters.extend((safe_limit, safe_offset))
+
+    with database_connection() as connection:
+        rows = connection.execute(
+            f"""
+            WITH pilot_questions AS (
+                SELECT
+                    user_message.message_id AS question_message_id,
+                    user_message.session_id,
+                    conversations.participant_name,
+                    user_message.content AS question,
+                    user_message.platform AS question_platform,
+                    user_message.created_at AS asked_at,
+                    (
+                        SELECT assistant_message.message_id
+                        FROM messages AS assistant_message
+                        WHERE assistant_message.session_id = user_message.session_id
+                          AND assistant_message.role = 'assistant'
+                          AND assistant_message.rowid > user_message.rowid
+                        ORDER BY assistant_message.rowid ASC
+                        LIMIT 1
+                    ) AS answer_message_id
+                FROM messages AS user_message
+                INNER JOIN conversations
+                    ON conversations.session_id = user_message.session_id
+                WHERE conversations.pilot_mode = 1
+                  AND user_message.role = 'user'
+            ),
+            question_rows AS (
+                SELECT
+                    pilot_questions.question_message_id,
+                    pilot_questions.session_id,
+                    pilot_questions.participant_name,
+                    pilot_questions.question,
+                    pilot_questions.asked_at,
+                    assistant.content AS answer,
+                    assistant.route,
+                    assistant.intent,
+                    COALESCE(assistant.platform, pilot_questions.question_platform)
+                        AS platform,
+                    assistant.source_document,
+                    feedback.helpful,
+                    feedback.reason AS feedback_reason,
+                    feedback.comment AS feedback_comment,
+                    feedback.created_at AS feedback_created_at
+                FROM pilot_questions
+                LEFT JOIN messages AS assistant
+                    ON assistant.message_id = pilot_questions.answer_message_id
+                LEFT JOIN feedback
+                    ON feedback.message_id = pilot_questions.answer_message_id
+            )
+            SELECT *
+            FROM question_rows
+            {where_sql}
+            ORDER BY asked_at DESC, question_message_id DESC
+            LIMIT ? OFFSET ?
+            """,
+            tuple(parameters),
+        ).fetchall()
+
+    return [dict(row) for row in rows]
 
 
 def get_recent_knowledge_gaps(limit: int = 5) -> list[dict[str, Any]]:

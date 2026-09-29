@@ -17,12 +17,21 @@ from langchain_ollama import (
     OllamaEmbeddings,
 )
 
+from core.app_logging import get_logger
 from core.conversation_context import build_contextual_query
 from core.platform_context import detect_platform
+from core.retrieval_profile import (
+    build_document_profile,
+    build_retrieval_profile,
+    issue_focus,
+    profile_score,
+    profiles_are_compatible,
+)
 from core.text_matching import normalize_text
 
 
 load_dotenv()
+LOGGER = get_logger("rag")
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -42,6 +51,11 @@ OLLAMA_EMBED_MODEL = os.getenv(
     "OLLAMA_EMBED_MODEL",
     "all-minilm",
 )
+
+MICROSOFT_SUPPORT_ENABLED = os.getenv(
+    "MICROSOFT_SUPPORT_ENABLED",
+    "false",
+).strip().lower() in {"1", "true", "yes", "on"}
 
 
 def get_float_setting(
@@ -67,10 +81,29 @@ def get_float_setting(
     return value
 
 
-RAG_MAX_DISTANCE = get_float_setting(
+# Acceptance testing showed that semantic matches above roughly 0.66 are too
+# unreliable for end-user support. Treat this as a code-level safety ceiling so
+# an old/stale .env value (for example 0.95) cannot silently weaken retrieval.
+RAG_HARD_DISTANCE_CEILING = 0.66
+
+_configured_max_distance = get_float_setting(
     "RAG_MAX_DISTANCE",
-    0.95,
+    RAG_HARD_DISTANCE_CEILING,
 )
+RAG_MAX_DISTANCE = min(_configured_max_distance, RAG_HARD_DISTANCE_CEILING)
+
+_configured_strong_distance = get_float_setting(
+    "RAG_STRONG_DISTANCE",
+    0.50,
+)
+RAG_STRONG_DISTANCE = min(_configured_strong_distance, RAG_MAX_DISTANCE)
+
+# v10: distance-less lexical matches are never allowed to produce an end-user
+# KB answer. They can still exist in the catalogue for diagnostics and future
+# tooling, but retrieval must have a real semantic score before context is
+# returned to the answer generator. Acceptance testing showed that None-distance
+# answers were overwhelmingly wrong-topic.
+ALLOW_DISTANCELESS_KB_ANSWERS = False
 
 
 @dataclass(frozen=True)
@@ -159,6 +192,11 @@ def get_lexical_documents() -> tuple[Document, ...]:
         return ()
 
     for file_path in sorted(KNOWLEDGE_DIRECTORY.glob("*.md")):
+        if not MICROSOFT_SUPPORT_ENABLED:
+            source_name = file_path.name.lower()
+            if "microsoft" in source_name or "windows" in source_name:
+                continue
+
         post = frontmatter.load(file_path)
         content = post.content.strip()
 
@@ -265,6 +303,23 @@ TERM_ALIASES = {
 
 
 PRODUCT_ALIASES = {
+    "google_chrome": (
+        "google chrome",
+        "chrome browser",
+        "chrome",
+    ),
+    "safari": (
+        "safari browser",
+        "safari",
+    ),
+    "firefox": (
+        "mozilla firefox",
+        "firefox",
+    ),
+    "adobe_creative_cloud": (
+        "adobe creative cloud",
+        "creative cloud",
+    ),
     "microsoft_word": (
         "microsoft word",
         "ms word",
@@ -292,6 +347,15 @@ PRODUCT_ALIASES = {
         "one drive",
         "onedrive",
     ),
+    "microsoft_outlook": (
+        "microsoft outlook",
+        "outlook",
+    ),
+    "adobe_acrobat": (
+        "adobe acrobat",
+        "acrobat",
+        "adobe reader",
+    ),
     "google_docs": (
         "google docs",
         "google doc",
@@ -318,10 +382,16 @@ PRODUCT_ALIASES = {
 
 
 PRODUCT_SUITES = {
+    "google_chrome": "google",
+    "safari": "apple",
+    "firefox": "mozilla",
+    "adobe_creative_cloud": "adobe",
     "microsoft_word": "microsoft",
     "microsoft_excel": "microsoft",
     "microsoft_powerpoint": "microsoft",
     "microsoft_onedrive": "microsoft",
+    "microsoft_outlook": "microsoft",
+    "adobe_acrobat": "adobe",
     "google_docs": "google",
     "google_sheets": "google",
     "google_slides": "google",
@@ -639,7 +709,8 @@ def document_topic_score(
 ) -> int:
     """Rerank semantic results using product, title, and metadata."""
 
-    question_terms = extract_terms(question)
+    focus_question = issue_focus(question)
+    question_terms = extract_terms(focus_question)
 
     title = str(
         document.metadata.get(
@@ -673,10 +744,14 @@ def document_topic_score(
     score += len(question_terms.intersection(content_terms)) * 2
 
     normalized_question = normalize_text(question)
+    normalized_focus = normalize_text(focus_question)
 
     for phrase in [part.strip() for part in keywords.split(",") if part.strip()]:
-        if normalize_text(phrase) in normalized_question:
-            score += 18
+        normalized_phrase = normalize_text(phrase)
+        if normalized_phrase in normalized_focus:
+            score += 24
+        elif normalized_phrase in normalized_question:
+            score += 12
 
     requested_product = detect_product(question)
 
@@ -755,34 +830,203 @@ def document_topic_score(
     return score
 
 
+def _identity_parts(document: Any) -> tuple[str, str]:
+    metadata = getattr(document, "metadata", {}) or {}
+    title = str(metadata.get("section_title", metadata.get("title", "")))
+    keywords = str(metadata.get("intent_keywords", ""))
+    return title, keywords
+
+
+def identity_overlap_count(question: str, document: Any) -> int:
+    """Count non-trivial query terms that occur in topic identity metadata."""
+
+    question_terms = extract_terms(issue_focus(question))
+    title, keywords = _identity_parts(document)
+    identity_terms = extract_terms(f"{title} {keywords}")
+    generic = {
+        "classroom", "screen", "display", "issue", "problem", "account",
+        "school", "device", "computer", "laptop", "application", "user",
+        "projector", "printer", "printing", "chromebook", "macbook", "macos",
+        "google", "drive", "zoom", "adobe", "chrome", "safari", "wifi",
+        "wireless", "keyboard", "camera", "audio", "sound", "website",
+        "file", "folder", "student", "teacher", "help", "support",
+    }
+    return len({term for term in question_terms.intersection(identity_terms) if term not in generic})
+
+
+def has_exact_intent_phrase(question: str, document: Any) -> bool:
+    """Return whether a multi-word intent keyword appears in the query."""
+
+    _, keywords = _identity_parts(document)
+    normalized_question = normalize_text(question)
+    for phrase in [part.strip() for part in keywords.split(",") if part.strip()]:
+        normalized_phrase = normalize_text(phrase)
+        if len(normalized_phrase.split()) >= 2 and normalized_phrase in normalized_question:
+            return True
+    return False
+
+
+def semantic_match_is_acceptable(
+    question: str,
+    query_profile: Any,
+    document: Any,
+    distance: float,
+) -> bool:
+    """Final v10 semantic gate for product, task, symptom and identity.
+
+    Embedding distance by itself is not enough. The remaining unseen-test
+    failures were usually semantically close but operationally different topics
+    inside the same suite. This gate gets progressively stricter as distance
+    gets weaker.
+    """
+
+    if distance > RAG_MAX_DISTANCE:
+        return False
+
+    document_profile = build_document_profile(document)
+    if not profiles_are_compatible(query_profile, document_profile):
+        return False
+
+    focus_domains = query_profile.focus_domains or query_profile.domains
+    focus_symptoms = query_profile.focus_symptoms or query_profile.symptoms
+    product_overlap = query_profile.products.intersection(document_profile.products)
+    platform_overlap = query_profile.platforms.intersection(document_profile.platforms)
+    domain_overlap = focus_domains.intersection(document_profile.domains)
+    symptom_overlap = focus_symptoms.intersection(document_profile.symptoms)
+    identity_count = identity_overlap_count(question, document)
+    exact_intent = has_exact_intent_phrase(question, document)
+
+    # Explicit products should remain in the same product when the topic has a
+    # product identity. A suite-level generic topic may still be accepted at a
+    # very strong distance, but not a weak one.
+    if query_profile.products and document_profile.products and not product_overlap:
+        return False
+
+    # Explicit OS/device context must never cross to the opposite platform.
+    if query_profile.platforms and document_profile.platforms and not platform_overlap:
+        return False
+
+    # A concrete task/problem family must agree whenever the topic itself has a
+    # task identity. This catches Chrome extension -> accessibility, Gmail filter
+    # -> spam, Meet attendance -> join-meeting, and mouse -> Wi-Fi.
+    if focus_domains and document_profile.domains and not domain_overlap:
+        return False
+
+    if focus_symptoms and document_profile.symptoms and not (symptom_overlap or domain_overlap):
+        return False
+
+    # Very strong semantic matches can tolerate sparse metadata, but a product
+    # name by itself is not enough when the user stated a concrete task. This
+    # prevents same-product collisions such as Zoom licence -> New Meeting.
+    structured_overlap = bool(product_overlap or platform_overlap or domain_overlap or symptom_overlap)
+    task_identity = bool(domain_overlap or symptom_overlap or exact_intent or identity_count >= 1)
+    has_task_signal = bool(focus_domains or focus_symptoms)
+
+    if distance <= 0.42:
+        if has_task_signal:
+            return task_identity
+        return exact_intent or identity_count >= 1 or structured_overlap
+
+    if distance <= RAG_STRONG_DISTANCE:
+        return task_identity and structured_overlap
+
+    return (exact_intent or identity_count >= 2) and structured_overlap and task_identity
+
+
 def has_meaningful_overlap(
     question: str,
     document: Any,
 ) -> bool:
-    question_terms = extract_terms(question)
+    """Require overlap with the topic identity, not incidental procedure text."""
 
+    question_terms = extract_terms(issue_focus(question))
     title = str(
         document.metadata.get(
             "section_title",
-            document.metadata.get(
-                "title",
-                "",
-            ),
+            document.metadata.get("title", ""),
         )
     )
+    keywords = str(document.metadata.get("intent_keywords", ""))
+    identity_terms = extract_terms(f"{title} {keywords}")
+    overlap = question_terms.intersection(identity_terms)
 
-    keywords = str(
-        document.metadata.get(
-            "intent_keywords",
-            "",
-        )
-    )
+    if len(overlap) >= 2:
+        return True
 
-    document_terms = extract_terms(f"{title} {keywords} {document.page_content}")
+    # One distinctive technical term can be enough, but generic words such as
+    # "classroom", "screen", "issue", or "account" should not validate a topic.
+    generic = {
+        "classroom", "screen", "display", "issue", "problem", "account",
+        "school", "device", "computer", "laptop", "application", "user",
+        "projector", "printer", "printing", "chromebook", "macbook", "macos",
+        "google", "drive", "zoom", "adobe", "chrome", "safari", "wifi",
+        "wireless", "keyboard", "camera", "audio", "sound", "website",
+    }
+    return any(len(word) >= 7 and word not in generic for word in overlap)
 
-    overlap = question_terms.intersection(document_terms)
 
-    return len(overlap) >= 2 or any(len(word) >= 7 for word in overlap)
+def lexical_match_is_strong(
+    question: str,
+    query_profile: Any,
+    document: Any,
+) -> bool:
+    """Require strong topic identity before using a no-distance lexical match.
+
+    A lexical catalogue scan is useful for exact support terms, but unlike a
+    semantic match it has no embedding distance. It therefore must prove a
+    product/domain/symptom match and meaningful title/intent-keyword overlap.
+    """
+
+    document_profile = build_document_profile(document)
+    focus_domains = query_profile.focus_domains or query_profile.domains
+    focus_symptoms = query_profile.focus_symptoms or query_profile.symptoms
+
+    product_overlap = query_profile.products.intersection(document_profile.products)
+    domain_overlap = focus_domains.intersection(document_profile.domains)
+    symptom_overlap = focus_symptoms.intersection(document_profile.symptoms)
+
+    title = str(document.metadata.get("section_title", document.metadata.get("title", "")))
+    keywords = str(document.metadata.get("intent_keywords", ""))
+    question_terms = extract_terms(issue_focus(question))
+    identity_terms = extract_terms(f"{title} {keywords}")
+    overlap_count = len(question_terms.intersection(identity_terms))
+
+    exact_intent_phrase = False
+    normalized_question = normalize_text(question)
+    for phrase in [part.strip() for part in keywords.split(",") if part.strip()]:
+        normalized_phrase = normalize_text(phrase)
+        if len(normalized_phrase.split()) >= 2 and contains_phrase(normalized_question, normalized_phrase):
+            exact_intent_phrase = True
+            break
+
+    # If the question itself has no identifiable product/domain/symptom, a
+    # lexical answer is too risky; let clarification/general fallback handle it.
+    if not (query_profile.products or focus_domains or focus_symptoms):
+        return False
+
+    if query_profile.products and not product_overlap:
+        return False
+
+    if focus_domains and document_profile.domains and not domain_overlap:
+        return False
+
+    if focus_symptoms and document_profile.symptoms and not (symptom_overlap or domain_overlap):
+        return False
+
+    return exact_intent_phrase or overlap_count >= 2
+
+
+def knowledge_document_is_enabled(document: Any) -> bool:
+    """Return whether a KB document belongs to a supported school platform."""
+
+    metadata = getattr(document, "metadata", {}) or {}
+    source = str(metadata.get("source", "")).lower()
+
+    if not MICROSOFT_SUPPORT_ENABLED:
+        if "microsoft" in source or "windows" in source:
+            return False
+
+    return True
 
 
 def retrieve_public_knowledge(
@@ -813,6 +1057,8 @@ def retrieve_public_knowledge(
         history,
     )
 
+    query_profile = build_retrieval_profile(retrieval_query)
+
     vector_results: list[tuple[Any, float]] = []
 
     try:
@@ -826,12 +1072,14 @@ def retrieve_public_knowledge(
                     "audience": "public",
                 },
             )
+            if knowledge_document_is_enabled(document)
         ]
     except Exception as error:
-        print(
-            "Semantic knowledge retrieval unavailable; "
-            "using approved lexical fallback: "
-            f"{type(error).__name__}: {error}"
+        LOGGER.warning(
+            "Semantic knowledge retrieval unavailable; using approved lexical "
+            "fallback: %s: %s",
+            type(error).__name__,
+            error,
         )
 
     # Keep the best semantic instance for each topic, then add every approved
@@ -860,12 +1108,15 @@ def retrieve_public_knowledge(
         if existing is None or distance < existing[1]:
             candidates[key] = (document, distance, True)
 
-    for document in get_lexical_documents():
-        key = candidate_key(document)
-        candidates.setdefault(
-            key,
-            (document, RAG_MAX_DISTANCE, False),
-        )
+    if ALLOW_DISTANCELESS_KB_ANSWERS:
+        for document in get_lexical_documents():
+            if not knowledge_document_is_enabled(document):
+                continue
+            key = candidate_key(document)
+            candidates.setdefault(
+                key,
+                (document, RAG_MAX_DISTANCE, False),
+            )
 
     requested_platform = detect_requested_platform(retrieval_query)
 
@@ -880,19 +1131,53 @@ def retrieve_public_knowledge(
         ):
             continue
 
+        document_profile = build_document_profile(document)
+
+        if not profiles_are_compatible(
+            query_profile,
+            document_profile,
+        ):
+            continue
+
         topic_score = document_topic_score(
             retrieval_query,
             document,
         )
+        topic_score += profile_score(
+            query_profile,
+            document_profile,
+        )
 
-        if not has_meaningful_overlap(
+        meaningful_overlap = has_meaningful_overlap(
             retrieval_query,
             document,
-        ):
-            continue
+        )
 
-        if semantic_match and distance > RAG_MAX_DISTANCE and topic_score < 24:
-            continue
+        if semantic_match:
+            if not semantic_match_is_acceptable(
+                retrieval_query,
+                query_profile,
+                document,
+                distance,
+            ):
+                continue
+            if distance > RAG_STRONG_DISTANCE and topic_score < 90:
+                continue
+        else:
+            # Production v10 does not answer from distance-less lexical matches.
+            # Keep this branch for explicit diagnostic opt-in only.
+            if not ALLOW_DISTANCELESS_KB_ANSWERS:
+                continue
+            if (
+                not meaningful_overlap
+                or topic_score < 90
+                or not lexical_match_is_strong(
+                    retrieval_query,
+                    query_profile,
+                    document,
+                )
+            ):
+                continue
 
         ranked.append(
             (
@@ -939,6 +1224,40 @@ def retrieve_public_knowledge(
                 if best_is_semantic
                 else None
             ),
+            matched_chunks=0,
+        )
+
+    # Final confidence gate. A vector result around 0.50+ was repeatedly shown
+    # by acceptance testing to be unsafe unless the query and topic also match
+    # on the actual problem family. This prevents a merely "closest" article
+    # from being answered with full confidence.
+    best_profile = build_document_profile(best_document)
+    focus_domains = query_profile.focus_domains or query_profile.domains
+    focus_symptoms = query_profile.focus_symptoms or query_profile.symptoms
+    domain_overlap = focus_domains.intersection(best_profile.domains)
+    symptom_overlap = focus_symptoms.intersection(best_profile.symptoms)
+    identity_overlap = has_meaningful_overlap(retrieval_query, best_document)
+
+    if best_is_semantic:
+        if not semantic_match_is_acceptable(
+            retrieval_query,
+            query_profile,
+            best_document,
+            best_distance,
+        ):
+            return RagResult(
+                context="",
+                sources=(),
+                best_distance=best_distance,
+                matched_chunks=0,
+            )
+    else:
+        # Distance-less knowledge is diagnostic-only in v10. Do not expose it to
+        # the answer generator even when lexical identity appears strong.
+        return RagResult(
+            context="",
+            sources=(),
+            best_distance=None,
             matched_chunks=0,
         )
 
